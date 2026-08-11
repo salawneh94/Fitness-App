@@ -21,6 +21,12 @@
   --status-warning: #fab219;
   --status-serious: #ec835a;
   --status-critical: #d03b3b;
+
+  /* Brand accents (decorative UI — buttons, rings, badges, logo — never used for chart series/status) */
+  --brand-primary: #f97316;
+  --brand-primary-dark: #ea580c;
+  --brand-lime: #a3e635;
+  --brand-lime-dark: #65a30d;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -54,7 +60,7 @@ body {
 
 @media (prefers-color-scheme: dark) {
   body {
-    background: #0f1015;
+    background: #0b0d14;
     color: #e6e6ea;
   }
 }

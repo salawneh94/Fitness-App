@@ -8,14 +8,26 @@ import type {
   SavedMeal,
   SavedMealItem,
   ScheduledWorkout,
+  SleepEntry,
+  StepsEntry,
   WeightEntry,
   WorkoutLogEntry,
 } from '../types';
 import { todayISO } from '../lib/calc';
 
+function upsertByDate<T extends { date: string }>(history: T[], entry: T): T[] {
+  const idx = history.findIndex((h) => h.date === entry.date);
+  if (idx === -1) return [...history, entry];
+  const next = [...history];
+  next[idx] = entry;
+  return next;
+}
+
 interface AppState {
   profile: Profile | null;
   weightHistory: WeightEntry[];
+  stepsHistory: StepsEntry[];
+  sleepHistory: SleepEntry[];
   foodEntries: FoodEntry[];
   scheduledWorkouts: ScheduledWorkout[];
   workoutLogs: WorkoutLogEntry[];
@@ -24,6 +36,8 @@ interface AppState {
 
   setProfile: (profile: Profile) => void;
   updateWeight: (weightKg: number) => void;
+  updateSteps: (steps: number) => void;
+  updateSleep: (hours: number) => void;
 
   addFoodEntry: (entry: Omit<FoodEntry, 'id' | 'loggedAt'>) => void;
   removeFoodEntry: (id: string) => void;
@@ -49,6 +63,8 @@ export const useAppStore = create<AppState>()(
     (set, get) => ({
       profile: null,
       weightHistory: [],
+      stepsHistory: [],
+      sleepHistory: [],
       foodEntries: [],
       scheduledWorkouts: [],
       workoutLogs: [],
@@ -67,17 +83,20 @@ export const useAppStore = create<AppState>()(
         }),
 
       updateWeight: (weightKg) =>
-        set((state) => {
-          const date = todayISO();
-          const existingIdx = state.weightHistory.findIndex((w) => w.date === date);
-          const history = [...state.weightHistory];
-          if (existingIdx >= 0) history[existingIdx] = { date, weightKg };
-          else history.push({ date, weightKg });
-          return {
-            weightHistory: history,
-            profile: state.profile ? { ...state.profile, weightKg } : state.profile,
-          };
-        }),
+        set((state) => ({
+          weightHistory: upsertByDate(state.weightHistory, { date: todayISO(), weightKg }),
+          profile: state.profile ? { ...state.profile, weightKg } : state.profile,
+        })),
+
+      updateSteps: (steps) =>
+        set((state) => ({
+          stepsHistory: upsertByDate(state.stepsHistory, { date: todayISO(), steps }),
+        })),
+
+      updateSleep: (hours) =>
+        set((state) => ({
+          sleepHistory: upsertByDate(state.sleepHistory, { date: todayISO(), hours }),
+        })),
 
       addFoodEntry: (entry) =>
         set((state) => ({

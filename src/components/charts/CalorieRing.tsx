@@ -1,3 +1,5 @@
+import RingGauge from './RingGauge';
+
 export default function CalorieRing({
   consumed,
   target,
@@ -8,41 +10,16 @@ export default function CalorieRing({
   burned?: number;
 }) {
   const remaining = Math.max(0, target - consumed + burned);
-  const pct = target > 0 ? Math.min(1, consumed / target) : 0;
-  const size = 160;
-  const stroke = 14;
-  const r = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * r;
-  const offset = circumference * (1 - pct);
   const over = consumed > target;
 
   return (
     <div className="flex items-center gap-6">
-      <div className="relative shrink-0" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="-rotate-90">
-          <circle cx={size / 2} cy={size / 2} r={r} stroke="var(--gridline)" strokeWidth={stroke} fill="none" />
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
-            stroke={over ? 'var(--status-warning)' : 'var(--series-1)'}
-            strokeWidth={stroke}
-            strokeLinecap="round"
-            fill="none"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            style={{ transition: 'stroke-dashoffset 0.4s ease' }}
-          />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            {Math.round(remaining)}
-          </span>
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {over ? 'over target' : 'kcal left'}
-          </span>
-        </div>
-      </div>
+      <RingGauge
+        value={consumed}
+        target={target}
+        centerValue={`${Math.round(remaining)}`}
+        centerLabel={over ? 'over target' : 'kcal left'}
+      />
       <dl className="text-sm space-y-1.5">
         <div className="flex justify-between gap-4">
           <dt style={{ color: 'var(--text-secondary)' }}>Target</dt>

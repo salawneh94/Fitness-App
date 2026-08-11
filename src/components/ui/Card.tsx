@@ -13,7 +13,7 @@ export default function Card({
 }) {
   return (
     <div
-      className={`bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-5 ${className}`}
+      className={`bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-3xl p-5 shadow-sm shadow-gray-200/50 dark:shadow-none ${className}`}
     >
       {(title || action) && (
         <div className="flex items-center justify-between mb-4">

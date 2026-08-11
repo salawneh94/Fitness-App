@@ -9,6 +9,7 @@ import CalorieRing from '../components/charts/CalorieRing';
 import MacroBars from '../components/charts/MacroBars';
 import MicronutrientList from '../components/MicronutrientList';
 import RestDayBanner from '../components/RestDayBanner';
+import QuickLogCard from '../components/QuickLogCard';
 import type { Micronutrients } from '../types';
 
 export default function OverviewPage() {
@@ -103,6 +104,8 @@ export default function OverviewPage() {
         )}
       </Card>
 
+      <QuickLogCard />
+
       {/* Stat tiles */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatTile icon={Flame} label="Calories Left Today" value={`${Math.max(0, Math.round(targets.calories - consumed.calories + caloriesBurnedToday))}`} sub={`of ${targets.calories} kcal`} accent="var(--series-1)" />
@@ -111,11 +114,11 @@ export default function OverviewPage() {
         <StatTile
           icon={Target}
           label="Weight Change"
-          value={`${weightDelta >= 0 ? '+' : ''}${weightDelta.toFixed(1)} kg`}
-          sub={`since ${weightHistory[0] ? new Date(weightHistory[0].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'start'}`}
+          value={`${weightDelta >= 0 ? '+' : ''}${weightDelta.toFixed(1)}`}
+          sub={`kg since ${weightHistory[0] ? new Date(weightHistory[0].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'start'}`}
           accent="var(--series-4)"
         />
-        <StatTile icon={Zap} label="Current Streak" value={`${streaks.currentStreak}d`} sub="days logged in a row" accent="var(--series-2)" />
+        <StatTile icon={Zap} label="Current Streak" value={`${streaks.currentStreak}d`} sub="days logged in a row" accent="var(--brand-lime)" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -134,7 +137,7 @@ export default function OverviewPage() {
       <Card title="Micronutrients Today">
         {todaysFood.length === 0 ? (
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            No food logged yet today. <Link to="/nutrition" className="text-emerald-600 dark:text-emerald-400 underline">Log a meal</Link> to see your micronutrient breakdown.
+            No food logged yet today. <Link to="/nutrition" className="text-orange-600 dark:text-orange-400 underline">Log a meal</Link> to see your micronutrient breakdown.
           </p>
         ) : (
           <MicronutrientList totals={microTotals} />
@@ -143,12 +146,12 @@ export default function OverviewPage() {
 
       <Link
         to="/progress"
-        className="flex items-center justify-between p-4 rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-emerald-400 transition-colors"
+        className="flex items-center justify-between p-4 rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-orange-400 transition-colors"
       >
         <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
           View weight trend, strength gains & progress photos
         </span>
-        <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Progress →</span>
+        <span className="text-sm font-medium text-orange-600 dark:text-orange-400">Progress →</span>
       </Link>
     </div>
   );

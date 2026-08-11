@@ -24,6 +24,16 @@ export interface WeightEntry {
   weightKg: number;
 }
 
+export interface StepsEntry {
+  date: string; // ISO date
+  steps: number;
+}
+
+export interface SleepEntry {
+  date: string; // ISO date
+  hours: number;
+}
+
 export interface Micronutrients {
   fiberG?: number;
   sugarG?: number;

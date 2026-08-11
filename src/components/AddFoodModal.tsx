@@ -7,7 +7,7 @@ import { useAppStore } from '../store/useAppStore';
 import { todayISO } from '../lib/calc';
 
 const inputCls =
-  'w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500';
+  'w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500';
 
 type Mode = 'choose' | 'scan' | 'manual' | 'confirmScanned' | 'savedMeals';
 
@@ -120,7 +120,7 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
               onClick={() => setMode('scan')}
               className="w-full flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800 text-left"
             >
-              <ScanBarcode className="text-emerald-600 dark:text-emerald-400" />
+              <ScanBarcode className="text-orange-600 dark:text-orange-400" />
               <div>
                 <p className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>Scan Barcode / QR</p>
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Auto-fill nutrition from packaging</p>
@@ -130,7 +130,7 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
               onClick={() => setMode('manual')}
               className="w-full flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800 text-left"
             >
-              <PenLine className="text-emerald-600 dark:text-emerald-400" />
+              <PenLine className="text-orange-600 dark:text-orange-400" />
               <div>
                 <p className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>Manual Entry</p>
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Type in the details yourself</p>
@@ -141,7 +141,7 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
                 onClick={() => setMode('savedMeals')}
                 className="w-full flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800 text-left"
               >
-                <Utensils className="text-emerald-600 dark:text-emerald-400" />
+                <Utensils className="text-orange-600 dark:text-orange-400" />
                 <div>
                   <p className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>From Saved Meals</p>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Quick-add a meal you've saved before</p>
@@ -187,8 +187,8 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
 
         {mode === 'confirmScanned' && scanned && (
           <div className="space-y-4">
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
-              <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-orange-50 dark:bg-orange-950/40">
+              <CheckCircle2 size={18} className="text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{scanned.name}</p>
                 {scanned.brand && <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{scanned.brand}</p>}
@@ -219,7 +219,7 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
               </button>
               <button
                 onClick={confirmScanned}
-                className="flex-1 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold"
+                className="flex-1 py-2.5 rounded-full bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold"
               >
                 Add to log
               </button>
@@ -273,7 +273,7 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
               >
                 Back
               </button>
-              <button type="submit" className="flex-1 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold">
+              <button type="submit" className="flex-1 py-2.5 rounded-full bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold">
                 Add to log
               </button>
             </div>

@@ -1,5 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
+import SplashPage from './pages/SplashPage';
+import LoginPage from './pages/LoginPage';
 import OverviewPage from './pages/OverviewPage';
 import NutritionPage from './pages/NutritionPage';
 import WorkoutsPage from './pages/WorkoutsPage';
@@ -10,7 +12,7 @@ import { useAppStore } from './store/useAppStore';
 
 function RequireProfile({ children }: { children: React.ReactNode }) {
   const profile = useAppStore((s) => s.profile);
-  if (!profile) return <Navigate to="/profile" replace />;
+  if (!profile) return <Navigate to="/welcome" replace />;
   return <>{children}</>;
 }
 
@@ -18,6 +20,8 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/welcome" element={<SplashPage />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route element={<Layout />}>
           <Route path="/profile" element={<ProfilePage />} />
           <Route

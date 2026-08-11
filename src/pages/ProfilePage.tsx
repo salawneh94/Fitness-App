@@ -20,7 +20,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 const inputCls =
-  'w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500';
+  'w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500';
 
 export default function ProfilePage() {
   const existing = useAppStore((s) => s.profile);
@@ -215,7 +215,7 @@ export default function ProfilePage() {
         </Card>
 
         {targets && (
-          <Card title="Your calculated daily targets" className="bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900">
+          <Card title="Your calculated daily targets" className="bg-orange-50/60 dark:bg-orange-950/30 border-orange-200 dark:border-orange-900">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
               <div>
                 <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{targets.calories}</p>
@@ -242,7 +242,7 @@ export default function ProfilePage() {
 
         <button
           type="submit"
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition-colors"
+          className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 rounded-full transition-colors"
         >
           {existing ? 'Save Changes' : 'Start Tracking'}
         </button>
@@ -312,7 +312,7 @@ function DataSection() {
         <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={handleImportFile} />
       </div>
       {message && (
-        <p className={`text-sm mt-3 ${message.type === 'error' ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
+        <p className={`text-sm mt-3 ${message.type === 'error' ? 'text-red-500' : 'text-orange-600 dark:text-orange-400'}`}>
           {message.text}
         </p>
       )}

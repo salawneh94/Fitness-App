@@ -22,7 +22,7 @@ export default function SavedMealsSection() {
     <Card
       title="Saved Meals"
       action={
-        <button onClick={() => setBuilding(true)} className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+        <button onClick={() => setBuilding(true)} className="flex items-center gap-1.5 text-sm font-medium text-orange-600 dark:text-orange-400">
           <Plus size={15} /> New
         </button>
       }
@@ -50,7 +50,7 @@ export default function SavedMealsSection() {
                       key={c.key}
                       onClick={() => logSavedMeal(meal.id, c.key)}
                       title={`Log to ${c.key}`}
-                      className="w-7 h-7 rounded-full text-xs font-semibold border border-gray-300 dark:border-neutral-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:border-emerald-400"
+                      className="w-7 h-7 rounded-full text-xs font-semibold border border-gray-300 dark:border-neutral-700 hover:bg-orange-50 dark:hover:bg-orange-950/40 hover:border-orange-400"
                       style={{ color: 'var(--text-secondary)' }}
                     >
                       {c.label}

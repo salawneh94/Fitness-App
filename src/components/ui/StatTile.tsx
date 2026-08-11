@@ -14,10 +14,10 @@ export default function StatTile({
   accent?: string;
 }) {
   return (
-    <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-5 flex items-start gap-4">
+    <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-3xl p-5 flex items-start gap-4 shadow-sm shadow-gray-200/50 dark:shadow-none">
       <div
-        className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-        style={{ background: `color-mix(in srgb, ${accent} 15%, transparent)`, color: accent }}
+        className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+        style={{ background: `color-mix(in srgb, ${accent} 18%, transparent)`, color: accent }}
       >
         <Icon size={20} />
       </div>

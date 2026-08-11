@@ -4,7 +4,7 @@ import { useAppStore } from '../store/useAppStore';
 import type { SavedMealItem } from '../types';
 
 const inputCls =
-  'w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500';
+  'w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500';
 
 const emptyItem = { name: '', calories: 0, proteinG: 0, carbsG: 0, fatG: 0, quantity: 1, servingLabel: 'serving' };
 
@@ -91,7 +91,7 @@ export default function SavedMealBuilderModal({ onClose }: { onClose: () => void
             <button
               type="button"
               onClick={addItem}
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-gray-300 dark:border-neutral-700 text-sm font-medium text-emerald-600 dark:text-emerald-400"
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-gray-300 dark:border-neutral-700 text-sm font-medium text-orange-600 dark:text-orange-400"
             >
               <Plus size={15} /> Add item to meal
             </button>
@@ -105,7 +105,7 @@ export default function SavedMealBuilderModal({ onClose }: { onClose: () => void
           <button
             onClick={save}
             disabled={!mealName.trim() || items.length === 0}
-            className="flex-1 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-sm font-semibold"
+            className="flex-1 py-2.5 rounded-full bg-orange-600 hover:bg-orange-700 disabled:opacity-40 text-white text-sm font-semibold"
           >
             Save Meal
           </button>

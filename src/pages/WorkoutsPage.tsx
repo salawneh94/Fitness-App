@@ -57,8 +57,8 @@ export default function WorkoutsPage() {
               key={day}
               onClick={() => setActiveDay(day)}
               className={`rounded-2xl border p-3 text-left transition-colors ${
-                isToday ? 'border-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/30' : 'border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900'
-              } hover:border-emerald-400`}
+                isToday ? 'border-orange-400 bg-orange-50/60 dark:bg-orange-950/30' : 'border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900'
+              } hover:border-orange-400`}
             >
               <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{day}</p>
               <p className="text-sm font-medium mt-1 line-clamp-2 min-h-[2.5rem]" style={{ color: w ? 'var(--text-primary)' : 'var(--text-muted)' }}>
@@ -173,7 +173,7 @@ function DayDetailModal({
                     href={ex.videoUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 shrink-0"
+                    className="flex items-center gap-1 text-xs font-medium text-orange-600 dark:text-orange-400 shrink-0"
                   >
                     <PlayCircle size={16} /> Demo
                   </a>
@@ -184,7 +184,7 @@ function DayDetailModal({
               <button onClick={onEdit} className="flex-1 py-2.5 rounded-lg border border-gray-300 dark:border-neutral-700 text-sm font-medium">
                 Edit
               </button>
-              <button onClick={() => onLog(workout)} className="flex-1 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold">
+              <button onClick={() => onLog(workout)} className="flex-1 py-2.5 rounded-full bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold">
                 Log as done
               </button>
             </div>
@@ -192,7 +192,7 @@ function DayDetailModal({
         ) : (
           <div className="text-center py-6">
             <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>No workout scheduled for this day.</p>
-            <button onClick={onEdit} className="inline-flex items-center gap-1.5 py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold">
+            <button onClick={onEdit} className="inline-flex items-center gap-1.5 py-2.5 px-4 rounded-full bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold">
               <Plus size={16} /> Add a workout
             </button>
           </div>
@@ -235,7 +235,7 @@ function EditDayModal({
         <label className="block mb-4">
           <span className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Workout name</span>
           <input
-            className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Push Day"
@@ -254,7 +254,7 @@ function EditDayModal({
                     onClick={() => toggle(ex.id)}
                     className={`text-xs px-2.5 py-1.5 rounded-full border transition-colors ${
                       selected.includes(ex.id)
-                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        ? 'bg-orange-600 text-white border-orange-600'
                         : 'border-gray-300 dark:border-neutral-700 text-gray-600 dark:text-gray-300'
                     }`}
                   >
@@ -272,7 +272,7 @@ function EditDayModal({
           </button>
           <button
             onClick={() => onSave(name, selected)}
-            className="flex-1 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold"
+            className="flex-1 py-2.5 rounded-full bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold"
           >
             Save
           </button>
@@ -351,7 +351,7 @@ function LogWorkoutModal({
             <input
               type="number"
               min={1}
-              className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
               value={durationMin}
               onChange={(e) => setDurationMin(Number(e.target.value))}
             />
@@ -361,7 +361,7 @@ function LogWorkoutModal({
             <input
               type="number"
               min={0}
-              className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
               value={caloriesBurned}
               onChange={(e) => setCaloriesBurned(e.target.value === '' ? '' : Number(e.target.value))}
             />
@@ -381,7 +381,7 @@ function LogWorkoutModal({
                   <button
                     type="button"
                     onClick={() => addSet(ex)}
-                    className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400"
+                    className="flex items-center gap-1 text-xs font-medium text-orange-600 dark:text-orange-400"
                   >
                     <Plus size={13} /> Add set
                   </button>
@@ -431,7 +431,7 @@ function LogWorkoutModal({
           <span className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Notes (optional)</span>
           <textarea
             rows={2}
-            className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
@@ -441,7 +441,7 @@ function LogWorkoutModal({
           <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-gray-300 dark:border-neutral-700 text-sm font-medium">
             Cancel
           </button>
-          <button onClick={save} className="flex-1 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold">
+          <button onClick={save} className="flex-1 py-2.5 rounded-full bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold">
             Save
           </button>
         </div>

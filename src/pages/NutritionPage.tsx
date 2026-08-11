@@ -118,7 +118,7 @@ export default function NutritionPage() {
               )}
               <button
                 onClick={() => setAddingMeal(key)}
-                className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700"
+                className="flex items-center gap-1.5 text-sm font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700"
               >
                 <Plus size={16} /> Add food
               </button>

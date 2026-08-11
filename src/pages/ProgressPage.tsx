@@ -2,19 +2,22 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Flame, Award, CalendarCheck, Camera, Trash2, Plus } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { computeStreaks } from '../lib/streaks';
-import { estimate1RM } from '../lib/calc';
+import { estimate1RM, todayISO, STEP_GOAL, SLEEP_GOAL_HOURS } from '../lib/calc';
 import { resizeImageFile } from '../lib/imageResize';
 import { savePhotoBlob, getPhotoBlob, deletePhotoBlob } from '../lib/photoStore';
 import Card from '../components/ui/Card';
 import StatTile from '../components/ui/StatTile';
 import WeightChart from '../components/charts/WeightChart';
 import StrengthChart from '../components/charts/StrengthChart';
+import RingGauge from '../components/charts/RingGauge';
 
 export default function ProgressPage() {
   const profile = useAppStore((s) => s.profile);
   const foodEntries = useAppStore((s) => s.foodEntries);
   const workoutLogs = useAppStore((s) => s.workoutLogs);
   const weightHistory = useAppStore((s) => s.weightHistory);
+  const stepsHistory = useAppStore((s) => s.stepsHistory);
+  const sleepHistory = useAppStore((s) => s.sleepHistory);
   const progressPhotos = useAppStore((s) => s.progressPhotos);
   const addProgressPhoto = useAppStore((s) => s.addProgressPhoto);
   const removeProgressPhoto = useAppStore((s) => s.removeProgressPhoto);
@@ -22,6 +25,9 @@ export default function ProgressPage() {
   if (!profile) return null;
 
   const streaks = computeStreaks(foodEntries, workoutLogs, profile.createdAt.slice(0, 10));
+  const today = todayISO();
+  const todaySteps = stepsHistory.find((s) => s.date === today)?.steps ?? 0;
+  const todaySleep = sleepHistory.find((s) => s.date === today)?.hours ?? 0;
 
   const exerciseOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -60,11 +66,35 @@ export default function ProgressPage() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatTile icon={Flame} label="Current Streak" value={`${streaks.currentStreak}d`} sub="active days in a row" accent="var(--series-2)" />
+        <StatTile icon={Flame} label="Current Streak" value={`${streaks.currentStreak}d`} sub="active days in a row" accent="var(--brand-lime)" />
         <StatTile icon={Award} label="Best Streak" value={`${streaks.bestStreak}d`} sub="your longest run" accent="var(--series-4)" />
         <StatTile icon={CalendarCheck} label="7-Day Adherence" value={`${Math.round(streaks.adherence7d * 100)}%`} sub="days logged this week" accent="var(--series-1)" />
         <StatTile icon={CalendarCheck} label="30-Day Adherence" value={`${Math.round(streaks.adherence30d * 100)}%`} sub="days logged this month" accent="var(--series-3)" />
       </div>
+
+      <Card title="Today's Activity">
+        <div className="flex flex-wrap gap-8 justify-around">
+          <RingGauge
+            value={todaySteps}
+            target={STEP_GOAL}
+            color="var(--brand-lime)"
+            centerValue={todaySteps.toLocaleString()}
+            centerLabel="steps"
+            allowOverTarget={false}
+          />
+          <RingGauge
+            value={todaySleep}
+            target={SLEEP_GOAL_HOURS}
+            color="var(--series-1)"
+            centerValue={`${todaySleep}h`}
+            centerLabel="sleep"
+            allowOverTarget={false}
+          />
+        </div>
+        <p className="text-xs text-center mt-4" style={{ color: 'var(--text-muted)' }}>
+          Log steps & sleep from the "Log Today" card on your Overview page.
+        </p>
+      </Card>
 
       <Card title="Weight Trend">
         <WeightChart data={weightHistory} />
@@ -156,7 +186,7 @@ function PhotosCard({
       action={
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400"
+          className="flex items-center gap-1.5 text-sm font-medium text-orange-600 dark:text-orange-400"
         >
           <Camera size={15} /> Add photo
         </button>
