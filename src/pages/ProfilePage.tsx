@@ -1,0 +1,237 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAppStore } from '../store/useAppStore';
+import type { ActivityLevel, Goal, Profile, Sex } from '../types';
+import { ACTIVITY_LABELS, GOAL_LABELS, bmi, calcDailyTargets } from '../lib/calc';
+import Card from '../components/ui/Card';
+
+const GOALS: Goal[] = ['lose_fat', 'build_muscle', 'maintain', 'improve_endurance', 'general_health'];
+const ACTIVITIES: ActivityLevel[] = ['sedentary', 'light', 'moderate', 'active', 'very_active'];
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+      {children}
+    </label>
+  );
+}
+
+const inputCls =
+  'w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500';
+
+export default function ProfilePage() {
+  const existing = useAppStore((s) => s.profile);
+  const setProfile = useAppStore((s) => s.setProfile);
+  const navigate = useNavigate();
+
+  const [form, setForm] = useState({
+    name: existing?.name ?? '',
+    age: existing?.age ?? 28,
+    sex: (existing?.sex ?? 'male') as Sex,
+    heightCm: existing?.heightCm ?? 175,
+    weightKg: existing?.weightKg ?? 75,
+    goal: (existing?.goal ?? 'build_muscle') as Goal,
+    targetWeightKg: existing?.targetWeightKg ?? 75,
+    timeframeWeeks: existing?.timeframeWeeks ?? 12,
+    expectations:
+      existing?.expectations ?? '',
+    activityLevel: (existing?.activityLevel ?? 'moderate') as ActivityLevel,
+  });
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const profile: Profile = {
+      ...form,
+      age: Number(form.age),
+      heightCm: Number(form.heightCm),
+      weightKg: Number(form.weightKg),
+      targetWeightKg: Number(form.targetWeightKg),
+      timeframeWeeks: Number(form.timeframeWeeks),
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
+    };
+    setProfile(profile);
+    navigate('/');
+  }
+
+  const preview: Profile = {
+    ...form,
+    age: Number(form.age),
+    heightCm: Number(form.heightCm),
+    weightKg: Number(form.weightKg),
+    targetWeightKg: Number(form.targetWeightKg),
+    timeframeWeeks: Number(form.timeframeWeeks),
+    createdAt: existing?.createdAt ?? new Date().toISOString(),
+  };
+  const targets = form.heightCm && form.weightKg && form.age ? calcDailyTargets(preview) : null;
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
+        {existing ? 'Edit Profile' : 'Welcome — let’s set up your profile'}
+      </h1>
+      <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
+        This powers your calorie & macro targets and personalizes your dashboard.
+      </p>
+
+      <form onSubmit={submit} className="space-y-6">
+        <Card title="About you">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <Field label="Name">
+                <input
+                  required
+                  className={inputCls}
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="Jane Doe"
+                />
+              </Field>
+            </div>
+            <Field label="Age">
+              <input
+                required
+                type="number"
+                min={13}
+                max={100}
+                className={inputCls}
+                value={form.age}
+                onChange={(e) => setForm((f) => ({ ...f, age: Number(e.target.value) }))}
+              />
+            </Field>
+            <Field label="Sex">
+              <select
+                className={inputCls}
+                value={form.sex}
+                onChange={(e) => setForm((f) => ({ ...f, sex: e.target.value as Sex }))}
+              >
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </Field>
+            <Field label="Height (cm)">
+              <input
+                required
+                type="number"
+                min={100}
+                max={250}
+                className={inputCls}
+                value={form.heightCm}
+                onChange={(e) => setForm((f) => ({ ...f, heightCm: Number(e.target.value) }))}
+              />
+            </Field>
+            <Field label="Current Weight (kg)">
+              <input
+                required
+                type="number"
+                min={30}
+                max={300}
+                step={0.1}
+                className={inputCls}
+                value={form.weightKg}
+                onChange={(e) => setForm((f) => ({ ...f, weightKg: Number(e.target.value) }))}
+              />
+            </Field>
+          </div>
+        </Card>
+
+        <Card title="Your goal">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <Field label="Primary goal">
+                <select
+                  className={inputCls}
+                  value={form.goal}
+                  onChange={(e) => setForm((f) => ({ ...f, goal: e.target.value as Goal }))}
+                >
+                  {GOALS.map((g) => (
+                    <option key={g} value={g}>{GOAL_LABELS[g]}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <Field label="Target weight (kg)">
+              <input
+                type="number"
+                min={30}
+                max={300}
+                step={0.1}
+                className={inputCls}
+                value={form.targetWeightKg}
+                onChange={(e) => setForm((f) => ({ ...f, targetWeightKg: Number(e.target.value) }))}
+              />
+            </Field>
+            <Field label="Timeframe (weeks)">
+              <input
+                type="number"
+                min={1}
+                max={104}
+                className={inputCls}
+                value={form.timeframeWeeks}
+                onChange={(e) => setForm((f) => ({ ...f, timeframeWeeks: Number(e.target.value) }))}
+              />
+            </Field>
+            <div className="col-span-2">
+              <Field label="Activity level">
+                <select
+                  className={inputCls}
+                  value={form.activityLevel}
+                  onChange={(e) => setForm((f) => ({ ...f, activityLevel: e.target.value as ActivityLevel }))}
+                >
+                  {ACTIVITIES.map((a) => (
+                    <option key={a} value={a}>{ACTIVITY_LABELS[a]}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <div className="col-span-2">
+              <Field label="What do you expect to achieve? (optional notes)">
+                <textarea
+                  className={inputCls}
+                  rows={3}
+                  value={form.expectations}
+                  onChange={(e) => setForm((f) => ({ ...f, expectations: e.target.value }))}
+                  placeholder="e.g. Lose 5kg and feel stronger in daily life, be able to do 10 pull-ups, run a 5k..."
+                />
+              </Field>
+            </div>
+          </div>
+        </Card>
+
+        {targets && (
+          <Card title="Your calculated daily targets" className="bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+              <div>
+                <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{targets.calories}</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>kcal / day</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{targets.proteinG}g</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>protein</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{targets.carbsG}g</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>carbs</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{targets.fatG}g</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>fat</p>
+              </div>
+            </div>
+            <p className="text-xs mt-3 text-center" style={{ color: 'var(--text-muted)' }}>
+              BMI: {bmi(preview).toFixed(1)} — targets recalculate automatically as your weight & activity change.
+            </p>
+          </Card>
+        )}
+
+        <button
+          type="submit"
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition-colors"
+        >
+          {existing ? 'Save Changes' : 'Start Tracking'}
+        </button>
+      </form>
+    </div>
+  );
+}
