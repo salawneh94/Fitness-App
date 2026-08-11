@@ -2,7 +2,11 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
   FoodEntry,
+  MealType,
   Profile,
+  ProgressPhoto,
+  SavedMeal,
+  SavedMealItem,
   ScheduledWorkout,
   WeightEntry,
   WorkoutLogEntry,
@@ -15,6 +19,8 @@ interface AppState {
   foodEntries: FoodEntry[];
   scheduledWorkouts: ScheduledWorkout[];
   workoutLogs: WorkoutLogEntry[];
+  progressPhotos: ProgressPhoto[];
+  savedMeals: SavedMeal[];
 
   setProfile: (profile: Profile) => void;
   updateWeight: (weightKg: number) => void;
@@ -25,6 +31,13 @@ interface AppState {
   setScheduledWorkouts: (workouts: ScheduledWorkout[]) => void;
   addWorkoutLog: (entry: Omit<WorkoutLogEntry, 'id'>) => void;
   removeWorkoutLog: (id: string) => void;
+
+  addProgressPhoto: (photo: Omit<ProgressPhoto, 'id'>) => string;
+  removeProgressPhoto: (id: string) => void;
+
+  addSavedMeal: (name: string, items: SavedMealItem[]) => void;
+  removeSavedMeal: (id: string) => void;
+  logSavedMeal: (mealTemplateId: string, targetMeal: MealType) => void;
 }
 
 function uid(): string {
@@ -33,12 +46,14 @@ function uid(): string {
 
 export const useAppStore = create<AppState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       profile: null,
       weightHistory: [],
       foodEntries: [],
       scheduledWorkouts: [],
       workoutLogs: [],
+      progressPhotos: [],
+      savedMeals: [],
 
       setProfile: (profile) =>
         set((state) => {
@@ -84,6 +99,46 @@ export const useAppStore = create<AppState>()(
 
       removeWorkoutLog: (id) =>
         set((state) => ({ workoutLogs: state.workoutLogs.filter((e) => e.id !== id) })),
+
+      addProgressPhoto: (photo) => {
+        const id = uid();
+        set((state) => ({ progressPhotos: [...state.progressPhotos, { ...photo, id }] }));
+        return id;
+      },
+
+      removeProgressPhoto: (id) =>
+        set((state) => ({ progressPhotos: state.progressPhotos.filter((p) => p.id !== id) })),
+
+      addSavedMeal: (name, items) =>
+        set((state) => ({
+          savedMeals: [
+            ...state.savedMeals,
+            { id: uid(), name, items, createdAt: new Date().toISOString() },
+          ],
+        })),
+
+      removeSavedMeal: (id) =>
+        set((state) => ({ savedMeals: state.savedMeals.filter((m) => m.id !== id) })),
+
+      logSavedMeal: (mealTemplateId, targetMeal) => {
+        const meal = get().savedMeals.find((m) => m.id === mealTemplateId);
+        if (!meal) return;
+        const date = todayISO();
+        const loggedAt = new Date().toISOString();
+        set((state) => ({
+          foodEntries: [
+            ...state.foodEntries,
+            ...meal.items.map((item) => ({
+              ...item,
+              id: uid(),
+              date,
+              meal: targetMeal,
+              source: 'manual' as const,
+              loggedAt,
+            })),
+          ],
+        }));
+      },
     }),
     { name: 'fitness-app-storage' }
   )

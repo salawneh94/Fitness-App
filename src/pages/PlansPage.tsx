@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { CheckCircle2, PlayCircle, Dumbbell } from 'lucide-react';
+import { CheckCircle2, PlayCircle, Dumbbell, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PLAN_TEMPLATES } from '../data/planTemplates';
 import type { ScheduledWorkout, Weekday } from '../types';
 import { useAppStore } from '../store/useAppStore';
+import { recommendPlan } from '../lib/planRecommendation';
 import Card from '../components/ui/Card';
 
 const WEEKDAYS: Weekday[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -13,8 +14,10 @@ function uid() {
 }
 
 export default function PlansPage() {
+  const profile = useAppStore((s) => s.profile);
   const setScheduledWorkouts = useAppStore((s) => s.setScheduledWorkouts);
-  const [expandedId, setExpandedId] = useState<string | null>(PLAN_TEMPLATES[0]?.id ?? null);
+  const recommendation = profile ? recommendPlan(profile) : null;
+  const [expandedId, setExpandedId] = useState<string | null>(recommendation?.template.id ?? PLAN_TEMPLATES[0]?.id ?? null);
   const [appliedId, setAppliedId] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -40,12 +43,25 @@ export default function PlansPage() {
         </p>
       </div>
 
+      {recommendation && (
+        <div className="flex items-start gap-3 p-4 rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/30">
+          <Sparkles size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+              Recommended for you: {recommendation.template.name}
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{recommendation.reason}</p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4">
         {PLAN_TEMPLATES.map((t) => {
           const isOpen = expandedId === t.id;
           const isApplied = appliedId === t.id;
+          const isRecommended = recommendation?.template.id === t.id;
           return (
-            <Card key={t.id} className="!p-0 overflow-hidden">
+            <Card key={t.id} className={`!p-0 overflow-hidden ${isRecommended ? 'ring-2 ring-emerald-400' : ''}`}>
               <button
                 onClick={() => setExpandedId(isOpen ? null : t.id)}
                 className="w-full flex items-center justify-between gap-4 p-5 text-left"
@@ -55,7 +71,14 @@ export default function PlansPage() {
                     <Dumbbell size={18} />
                   </div>
                   <div className="min-w-0">
-                    <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>{t.name}</p>
+                    <p className="font-semibold flex items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
+                      {t.name}
+                      {isRecommended && (
+                        <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-emerald-600 text-white">
+                          Recommended
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t.split} · {t.daysPerWeek} days/week</p>
                   </div>
                 </div>

@@ -72,3 +72,9 @@ export const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
 export function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
+
+// Epley formula — a widely used estimate of 1-rep max from a submaximal set.
+export function estimate1RM(weightKg: number, reps: number): number {
+  if (reps <= 1) return weightKg;
+  return weightKg * (1 + reps / 30);
+}

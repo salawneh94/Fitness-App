@@ -8,6 +8,7 @@ import CalorieRing from '../components/charts/CalorieRing';
 import MacroBars from '../components/charts/MacroBars';
 import MicronutrientList from '../components/MicronutrientList';
 import AddFoodModal from '../components/AddFoodModal';
+import SavedMealsSection from '../components/SavedMealsSection';
 import type { Micronutrients } from '../types';
 
 const MEALS: { key: MealType; label: string }[] = [
@@ -72,6 +73,8 @@ export default function NutritionPage() {
       <Card title="Micronutrients Today">
         <MicronutrientList totals={microTotals} />
       </Card>
+
+      <SavedMealsSection />
 
       <div className="space-y-4">
         {MEALS.map(({ key, label }) => {

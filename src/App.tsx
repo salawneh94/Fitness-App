@@ -4,6 +4,7 @@ import OverviewPage from './pages/OverviewPage';
 import NutritionPage from './pages/NutritionPage';
 import WorkoutsPage from './pages/WorkoutsPage';
 import PlansPage from './pages/PlansPage';
+import ProgressPage from './pages/ProgressPage';
 import ProfilePage from './pages/ProfilePage';
 import { useAppStore } from './store/useAppStore';
 
@@ -48,6 +49,14 @@ function App() {
             element={
               <RequireProfile>
                 <PlansPage />
+              </RequireProfile>
+            }
+          />
+          <Route
+            path="/progress"
+            element={
+              <RequireProfile>
+                <ProgressPage />
               </RequireProfile>
             }
           />

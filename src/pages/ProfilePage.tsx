@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Download, Upload, Loader2 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import type { ActivityLevel, Goal, Profile, Sex } from '../types';
 import { ACTIVITY_LABELS, GOAL_LABELS, bmi, calcDailyTargets } from '../lib/calc';
+import { exportAllData, importAllData } from '../lib/exportImport';
 import Card from '../components/ui/Card';
 
 const GOALS: Goal[] = ['lose_fat', 'build_muscle', 'maintain', 'improve_endurance', 'general_health'];
@@ -37,6 +39,7 @@ export default function ProfilePage() {
     expectations:
       existing?.expectations ?? '',
     activityLevel: (existing?.activityLevel ?? 'moderate') as ActivityLevel,
+    preferredDaysPerWeek: existing?.preferredDaysPerWeek ?? 4,
   });
 
   function submit(e: React.FormEvent) {
@@ -186,6 +189,18 @@ export default function ProfilePage() {
               </Field>
             </div>
             <div className="col-span-2">
+              <Field label="How many days a week can you train?">
+                <input
+                  type="number"
+                  min={1}
+                  max={7}
+                  className={inputCls}
+                  value={form.preferredDaysPerWeek}
+                  onChange={(e) => setForm((f) => ({ ...f, preferredDaysPerWeek: Number(e.target.value) }))}
+                />
+              </Field>
+            </div>
+            <div className="col-span-2">
               <Field label="What do you expect to achieve? (optional notes)">
                 <textarea
                   className={inputCls}
@@ -232,6 +247,78 @@ export default function ProfilePage() {
           {existing ? 'Save Changes' : 'Start Tracking'}
         </button>
       </form>
+
+      {existing && <DataSection />}
     </div>
+  );
+}
+
+function DataSection() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState<'export' | 'import' | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  async function handleExport() {
+    setBusy('export');
+    setMessage(null);
+    try {
+      await exportAllData();
+      setMessage({ type: 'success', text: 'Backup downloaded.' });
+    } catch {
+      setMessage({ type: 'error', text: 'Export failed — please try again.' });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setBusy('import');
+    setMessage(null);
+    try {
+      await importAllData(file);
+      window.location.reload();
+    } catch {
+      setMessage({ type: 'error', text: 'That file doesn’t look like a valid FitTrack backup.' });
+      setBusy(null);
+    }
+  }
+
+  return (
+    <Card title="Your Data" className="mt-6">
+      <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+        Everything is stored locally in this browser. Export a backup to keep it safe or move it to another
+        device/browser, then import it there.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <button
+          onClick={handleExport}
+          disabled={busy !== null}
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border border-gray-300 dark:border-neutral-700 text-sm font-medium disabled:opacity-50"
+        >
+          {busy === 'export' ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+          Export backup
+        </button>
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={busy !== null}
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border border-gray-300 dark:border-neutral-700 text-sm font-medium disabled:opacity-50"
+        >
+          {busy === 'import' ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+          Import backup
+        </button>
+        <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={handleImportFile} />
+      </div>
+      {message && (
+        <p className={`text-sm mt-3 ${message.type === 'error' ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
+          {message.text}
+        </p>
+      )}
+      <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
+        Importing replaces all current data in this browser with the contents of the backup file.
+      </p>
+    </Card>
   );
 }

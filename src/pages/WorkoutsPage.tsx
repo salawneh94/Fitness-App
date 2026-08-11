@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { PlayCircle, Plus, X, Trash2, Clock } from 'lucide-react';
+import { PlayCircle, Plus, X, Trash2, Clock, Minus } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import type { ScheduledWorkout, Weekday } from '../types';
+import type { Exercise, ExerciseLogEntry, ScheduledWorkout, Weekday } from '../types';
 import { EXERCISE_LIBRARY } from '../data/exercises';
 import { todayISO } from '../lib/calc';
+import { computeRestDayInsight } from '../lib/streaks';
 import Card from '../components/ui/Card';
+import RestDayBanner from '../components/RestDayBanner';
 
 const WEEKDAYS: Weekday[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -24,6 +26,7 @@ export default function WorkoutsPage() {
   const [loggingDay, setLoggingDay] = useState<ScheduledWorkout | null>(null);
 
   const workoutForDay = (day: Weekday) => scheduledWorkouts.find((w) => w.day === day);
+  const restInsight = computeRestDayInsight(workoutLogs);
 
   function saveDayWorkout(day: Weekday, name: string, exerciseIds: string[]) {
     const exercises = EXERCISE_LIBRARY.filter((e) => exerciseIds.includes(e.id));
@@ -42,6 +45,8 @@ export default function WorkoutsPage() {
         <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Workout Tracker</h1>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Your weekly schedule — tap a day to see exercises & video demos.</p>
       </div>
+
+      {restInsight.shouldRest && <RestDayBanner consecutiveDays={restInsight.consecutiveTrainedDays} />}
 
       <div className="grid grid-cols-4 sm:grid-cols-7 gap-3">
         {WEEKDAYS.map((day) => {
@@ -92,10 +97,10 @@ export default function WorkoutsPage() {
 
       {loggingDay && (
         <LogWorkoutModal
-          workoutName={loggingDay.name}
+          workout={loggingDay}
           onClose={() => setLoggingDay(null)}
-          onSave={(durationMin, caloriesBurned, notes) => {
-            addWorkoutLog({ date: todayISO(), workoutName: loggingDay.name, durationMin, caloriesBurned, notes });
+          onSave={(durationMin, caloriesBurned, notes, exerciseLogs) => {
+            addWorkoutLog({ date: todayISO(), workoutName: loggingDay.name, durationMin, caloriesBurned, notes, exerciseLogs });
             setLoggingDay(null);
           }}
         />
@@ -113,6 +118,9 @@ export default function WorkoutsPage() {
                   <p className="text-xs flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
                     <Clock size={12} /> {log.durationMin} min · {new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     {log.caloriesBurned ? ` · ${log.caloriesBurned} kcal` : ''}
+                    {log.exerciseLogs && log.exerciseLogs.length > 0
+                      ? ` · ${log.exerciseLogs.reduce((s, e) => s + e.sets.length, 0)} sets logged`
+                      : ''}
                   </p>
                 </div>
                 <button onClick={() => removeWorkoutLog(log.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40">
@@ -275,28 +283,69 @@ function EditDayModal({
 }
 
 function LogWorkoutModal({
-  workoutName,
+  workout,
   onClose,
   onSave,
 }: {
-  workoutName: string;
+  workout: ScheduledWorkout;
   onClose: () => void;
-  onSave: (durationMin: number, caloriesBurned: number | undefined, notes: string | undefined) => void;
+  onSave: (
+    durationMin: number,
+    caloriesBurned: number | undefined,
+    notes: string | undefined,
+    exerciseLogs: ExerciseLogEntry[]
+  ) => void;
 }) {
   const [durationMin, setDurationMin] = useState(45);
   const [caloriesBurned, setCaloriesBurned] = useState<number | ''>('');
   const [notes, setNotes] = useState('');
+  const [setsByExercise, setSetsByExercise] = useState<Record<string, { weightKg: number; reps: number }[]>>({});
+
+  function addSet(ex: Exercise) {
+    setSetsByExercise((prev) => ({
+      ...prev,
+      [ex.id]: [...(prev[ex.id] ?? []), { weightKg: 0, reps: 0 }],
+    }));
+  }
+
+  function updateSet(exId: string, idx: number, field: 'weightKg' | 'reps', value: number) {
+    setSetsByExercise((prev) => {
+      const sets = [...(prev[exId] ?? [])];
+      sets[idx] = { ...sets[idx], [field]: value };
+      return { ...prev, [exId]: sets };
+    });
+  }
+
+  function removeSet(exId: string, idx: number) {
+    setSetsByExercise((prev) => ({
+      ...prev,
+      [exId]: (prev[exId] ?? []).filter((_, i) => i !== idx),
+    }));
+  }
+
+  function save() {
+    const exerciseLogs: ExerciseLogEntry[] = workout.exercises
+      .filter((ex) => (setsByExercise[ex.id] ?? []).length > 0)
+      .map((ex) => ({
+        exerciseId: ex.id,
+        exerciseName: ex.name,
+        sets: setsByExercise[ex.id].filter((s) => s.weightKg > 0 || s.reps > 0),
+      }))
+      .filter((e) => e.sets.length > 0);
+    onSave(durationMin, caloriesBurned === '' ? undefined : caloriesBurned, notes || undefined, exerciseLogs);
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 w-full max-w-sm">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Log: {workoutName}</h3>
+          <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Log: {workout.name}</h3>
           <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800" aria-label="Close">
             <X size={18} />
           </button>
         </div>
-        <div className="space-y-3">
+
+        <div className="grid grid-cols-2 gap-3 mb-4">
           <label className="block">
             <span className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Duration (min)</span>
             <input
@@ -317,24 +366,82 @@ function LogWorkoutModal({
               onChange={(e) => setCaloriesBurned(e.target.value === '' ? '' : Number(e.target.value))}
             />
           </label>
-          <label className="block">
-            <span className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Notes (optional)</span>
-            <textarea
-              rows={2}
-              className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </label>
         </div>
-        <div className="flex gap-2 mt-4">
+
+        <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
+          Sets (optional — track weight × reps for progress charts)
+        </p>
+        <div className="space-y-3 mb-4">
+          {workout.exercises.map((ex) => {
+            const sets = setsByExercise[ex.id] ?? [];
+            return (
+              <div key={ex.id} className="rounded-xl border border-gray-200 dark:border-neutral-800 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{ex.name}</p>
+                  <button
+                    type="button"
+                    onClick={() => addSet(ex)}
+                    className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400"
+                  >
+                    <Plus size={13} /> Add set
+                  </button>
+                </div>
+                {sets.length > 0 && (
+                  <div className="space-y-1.5">
+                    {sets.map((s, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <span className="text-xs w-10 shrink-0" style={{ color: 'var(--text-muted)' }}>Set {idx + 1}</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.5}
+                          placeholder="kg"
+                          className="w-20 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-2 py-1 text-sm"
+                          value={s.weightKg || ''}
+                          onChange={(e) => updateSet(ex.id, idx, 'weightKg', Number(e.target.value))}
+                        />
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>kg ×</span>
+                        <input
+                          type="number"
+                          min={0}
+                          placeholder="reps"
+                          className="w-16 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-2 py-1 text-sm"
+                          value={s.reps || ''}
+                          onChange={(e) => updateSet(ex.id, idx, 'reps', Number(e.target.value))}
+                        />
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>reps</span>
+                        <button
+                          type="button"
+                          onClick={() => removeSet(ex.id, idx)}
+                          className="ml-auto p-1 rounded text-gray-400 hover:text-red-500"
+                          aria-label="Remove set"
+                        >
+                          <Minus size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <label className="block mb-4">
+          <span className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Notes (optional)</span>
+          <textarea
+            rows={2}
+            className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </label>
+
+        <div className="flex gap-2">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-gray-300 dark:border-neutral-700 text-sm font-medium">
             Cancel
           </button>
-          <button
-            onClick={() => onSave(durationMin, caloriesBurned === '' ? undefined : caloriesBurned, notes || undefined)}
-            className="flex-1 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold"
-          >
+          <button onClick={save} className="flex-1 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold">
             Save
           </button>
         </div>

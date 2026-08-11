@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Apple, Dumbbell, ListChecks, UserRound } from 'lucide-react';
+import { LayoutDashboard, Apple, Dumbbell, ListChecks, UserRound, TrendingUp } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 
 const NAV_ITEMS = [
@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { to: '/nutrition', label: 'Nutrition', icon: Apple, end: false },
   { to: '/workouts', label: 'Workouts', icon: Dumbbell, end: false },
   { to: '/plans', label: 'Plan Ideas', icon: ListChecks, end: false },
+  { to: '/progress', label: 'Progress', icon: TrendingUp, end: false },
 ];
 
 export default function Layout() {

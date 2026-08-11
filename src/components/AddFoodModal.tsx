@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, ScanBarcode, PenLine, Loader2, CheckCircle2 } from 'lucide-react';
+import { X, ScanBarcode, PenLine, Loader2, CheckCircle2, Utensils } from 'lucide-react';
 import BarcodeScannerModal from './BarcodeScannerModal';
 import { lookupBarcode, type ScannedProduct } from '../lib/foodApi';
 import type { FoodEntry, MealType } from '../types';
@@ -9,10 +9,12 @@ import { todayISO } from '../lib/calc';
 const inputCls =
   'w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500';
 
-type Mode = 'choose' | 'scan' | 'manual' | 'confirmScanned';
+type Mode = 'choose' | 'scan' | 'manual' | 'confirmScanned' | 'savedMeals';
 
 export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClose: () => void }) {
   const addFoodEntry = useAppStore((s) => s.addFoodEntry);
+  const savedMeals = useAppStore((s) => s.savedMeals);
+  const logSavedMeal = useAppStore((s) => s.logSavedMeal);
   const [mode, setMode] = useState<Mode>('choose');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -133,6 +135,48 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
                 <p className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>Manual Entry</p>
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Type in the details yourself</p>
               </div>
+            </button>
+            {savedMeals.length > 0 && (
+              <button
+                onClick={() => setMode('savedMeals')}
+                className="w-full flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800 text-left"
+              >
+                <Utensils className="text-emerald-600 dark:text-emerald-400" />
+                <div>
+                  <p className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>From Saved Meals</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Quick-add a meal you've saved before</p>
+                </div>
+              </button>
+            )}
+          </div>
+        )}
+
+        {mode === 'savedMeals' && (
+          <div className="space-y-2">
+            {savedMeals.map((m) => {
+              const totalCals = m.items.reduce((s, i) => s + i.calories * i.quantity, 0);
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => {
+                    logSavedMeal(m.id, meal);
+                    onClose();
+                  }}
+                  className="w-full flex items-center justify-between p-3 rounded-xl border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800 text-left"
+                >
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{m.name}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{m.items.length} items</p>
+                  </div>
+                  <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{Math.round(totalCals)} kcal</span>
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setMode('choose')}
+              className="w-full py-2.5 rounded-lg border border-gray-300 dark:border-neutral-700 text-sm font-medium"
+            >
+              Back
             </button>
           </div>
         )}

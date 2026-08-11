@@ -1,13 +1,14 @@
 import { Link } from 'react-router-dom';
-import { Flame, Clock, Target, TrendingUp, Pencil } from 'lucide-react';
+import { Flame, Clock, Target, TrendingUp, Pencil, Zap } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { calcDailyTargets, GOAL_LABELS, todayISO } from '../lib/calc';
+import { computeStreaks, computeRestDayInsight } from '../lib/streaks';
 import Card from '../components/ui/Card';
 import StatTile from '../components/ui/StatTile';
 import CalorieRing from '../components/charts/CalorieRing';
 import MacroBars from '../components/charts/MacroBars';
-import WeightChart from '../components/charts/WeightChart';
 import MicronutrientList from '../components/MicronutrientList';
+import RestDayBanner from '../components/RestDayBanner';
 import type { Micronutrients } from '../types';
 
 export default function OverviewPage() {
@@ -58,8 +59,13 @@ export default function OverviewPage() {
   const startWeight = weightHistory[0]?.weightKg ?? profile.weightKg;
   const weightDelta = profile.weightKg - startWeight;
 
+  const streaks = computeStreaks(foodEntries, workoutLogs, profile.createdAt.slice(0, 10));
+  const restInsight = computeRestDayInsight(workoutLogs);
+
   return (
     <div className="space-y-6">
+      {restInsight.shouldRest && <RestDayBanner consecutiveDays={restInsight.consecutiveTrainedDays} />}
+
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
@@ -98,7 +104,7 @@ export default function OverviewPage() {
       </Card>
 
       {/* Stat tiles */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatTile icon={Flame} label="Calories Left Today" value={`${Math.max(0, Math.round(targets.calories - consumed.calories + caloriesBurnedToday))}`} sub={`of ${targets.calories} kcal`} accent="var(--series-1)" />
         <StatTile icon={Clock} label="Workout Time Today" value={`${workoutMinutesToday} min`} sub={todaysWorkouts.map((w) => w.workoutName).join(', ') || 'No workout logged yet'} accent="var(--series-3)" />
         <StatTile icon={TrendingUp} label="This Week" value={`${weeklyMinutes} min`} sub="total training time" accent="var(--series-2)" />
@@ -109,6 +115,7 @@ export default function OverviewPage() {
           sub={`since ${weightHistory[0] ? new Date(weightHistory[0].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'start'}`}
           accent="var(--series-4)"
         />
+        <StatTile icon={Zap} label="Current Streak" value={`${streaks.currentStreak}d`} sub="days logged in a row" accent="var(--series-2)" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -134,9 +141,15 @@ export default function OverviewPage() {
         )}
       </Card>
 
-      <Card title="Weight Progress">
-        <WeightChart data={weightHistory} />
-      </Card>
+      <Link
+        to="/progress"
+        className="flex items-center justify-between p-4 rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-emerald-400 transition-colors"
+      >
+        <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+          View weight trend, strength gains & progress photos
+        </span>
+        <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Progress →</span>
+      </Link>
     </div>
   );
 }

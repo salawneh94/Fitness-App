@@ -14,6 +14,7 @@ export const PLAN_TEMPLATES: WorkoutPlanTemplate[] = [
     split: 'Upper / Lower',
     description: 'A balanced 4-day split alternating upper and lower body — great for strength and hypertrophy with solid recovery time.',
     daysPerWeek: 4,
+    goals: ['build_muscle', 'maintain', 'general_health'],
     days: [
       { label: 'Day 1', focus: 'Upper Body (Strength)', exercises: [ex('bench-press'), ex('barbell-row'), ex('ohp'), ex('pull-up'), ex('barbell-curl')] },
       { label: 'Day 2', focus: 'Lower Body (Strength)', exercises: [ex('squat'), ex('rdl'), ex('leg-press'), ex('calf-raise'), ex('plank')] },
@@ -27,6 +28,7 @@ export const PLAN_TEMPLATES: WorkoutPlanTemplate[] = [
     split: 'Push / Pull / Legs',
     description: 'A classic 6-day (or 3-day repeated) split grouping muscles by movement pattern — high volume for serious muscle growth.',
     daysPerWeek: 6,
+    goals: ['build_muscle'],
     days: [
       { label: 'Day 1', focus: 'Push (Chest, Shoulders, Triceps)', exercises: [ex('bench-press'), ex('ohp'), ex('incline-db-press'), ex('lateral-raise'), ex('tricep-pushdown')] },
       { label: 'Day 2', focus: 'Pull (Back, Biceps)', exercises: [ex('deadlift'), ex('pull-up'), ex('barbell-row'), ex('face-pull'), ex('barbell-curl')] },
@@ -42,6 +44,7 @@ export const PLAN_TEMPLATES: WorkoutPlanTemplate[] = [
     split: 'Full Body',
     description: 'Efficient full-body sessions 3x/week — ideal for beginners or anyone with limited gym time who still wants complete coverage.',
     daysPerWeek: 3,
+    goals: ['general_health', 'maintain', 'lose_fat', 'build_muscle'],
     days: [
       { label: 'Day 1', focus: 'Full Body A', exercises: [ex('squat'), ex('bench-press'), ex('barbell-row'), ex('plank')] },
       { label: 'Day 2', focus: 'Full Body B', exercises: [ex('deadlift'), ex('ohp'), ex('pull-up'), ex('russian-twist')] },
@@ -54,6 +57,7 @@ export const PLAN_TEMPLATES: WorkoutPlanTemplate[] = [
     split: 'Bro Split',
     description: 'One muscle group per day across 5 days — maximum focused volume per body part, popular for dedicated hypertrophy training.',
     daysPerWeek: 5,
+    goals: ['build_muscle'],
     days: [
       { label: 'Day 1', focus: 'Chest', exercises: [ex('bench-press'), ex('incline-db-press'), ex('dips'), ex('push-up')] },
       { label: 'Day 2', focus: 'Back', exercises: [ex('deadlift'), ex('pull-up'), ex('barbell-row'), ex('lat-pulldown')] },
@@ -68,6 +72,7 @@ export const PLAN_TEMPLATES: WorkoutPlanTemplate[] = [
     split: 'Full Body (No Equipment)',
     description: 'No gym, no problem — a 3-day bodyweight-only routine you can do anywhere.',
     daysPerWeek: 3,
+    goals: ['general_health', 'lose_fat', 'maintain'],
     days: [
       { label: 'Day 1', focus: 'Push & Core', exercises: [ex('push-up'), ex('dips'), ex('plank'), ex('burpee')] },
       { label: 'Day 2', focus: 'Pull & Legs', exercises: [ex('pull-up'), ex('lunge'), ex('russian-twist')] },
@@ -80,6 +85,7 @@ export const PLAN_TEMPLATES: WorkoutPlanTemplate[] = [
     split: 'Endurance',
     description: 'Built for endurance and fat-loss goals — mixes steady-state and interval work with light full-body strength.',
     daysPerWeek: 4,
+    goals: ['lose_fat', 'improve_endurance'],
     days: [
       { label: 'Day 1', focus: 'Steady Cardio', exercises: [ex('running')] },
       { label: 'Day 2', focus: 'Full Body Strength', exercises: [ex('squat'), ex('push-up'), ex('barbell-row'), ex('plank')] },

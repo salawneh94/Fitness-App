@@ -15,6 +15,7 @@ export interface Profile {
   timeframeWeeks: number;
   expectations: string;
   activityLevel: ActivityLevel;
+  preferredDaysPerWeek: number;
   createdAt: string;
 }
 
@@ -89,6 +90,17 @@ export interface ScheduledWorkout {
   exercises: Exercise[];
 }
 
+export interface SetEntry {
+  weightKg: number;
+  reps: number;
+}
+
+export interface ExerciseLogEntry {
+  exerciseId: string;
+  exerciseName: string;
+  sets: SetEntry[];
+}
+
 export interface WorkoutLogEntry {
   id: string;
   date: string; // ISO date
@@ -96,6 +108,7 @@ export interface WorkoutLogEntry {
   durationMin: number;
   caloriesBurned?: number;
   notes?: string;
+  exerciseLogs?: ExerciseLogEntry[];
 }
 
 export interface WorkoutPlanTemplate {
@@ -104,5 +117,32 @@ export interface WorkoutPlanTemplate {
   split: string; // e.g. "Upper/Lower", "Push/Pull/Legs"
   description: string;
   daysPerWeek: number;
+  goals: Goal[]; // which profile goals this split suits best
   days: { label: string; focus: string; exercises: Exercise[] }[];
+}
+
+export interface ProgressPhoto {
+  id: string;
+  date: string; // ISO date
+  note?: string;
+  // The actual image blob lives in IndexedDB (see lib/photoStore.ts), keyed by this id.
+}
+
+export interface SavedMealItem {
+  name: string;
+  brand?: string;
+  quantity: number;
+  servingLabel?: string;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  micros?: Micronutrients;
+}
+
+export interface SavedMeal {
+  id: string;
+  name: string;
+  items: SavedMealItem[];
+  createdAt: string;
 }
