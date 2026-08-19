@@ -3,6 +3,7 @@ import { Check } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { todayISO } from '../lib/calc';
 import Card from './ui/Card';
+import WeightInput from './ui/WeightInput';
 
 const inputCls =
   'w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500';
@@ -38,15 +39,8 @@ export default function QuickLogCard() {
     <Card title="Log Today">
       <div className="grid grid-cols-3 gap-3 mb-3">
         <label className="block">
-          <span className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Weight (kg)</span>
-          <input
-            type="number"
-            min={0}
-            step={0.1}
-            className={inputCls}
-            value={weight}
-            onChange={(e) => setWeight(e.target.value === '' ? '' : Number(e.target.value))}
-          />
+          <span className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Weight</span>
+          <WeightInput valueKg={weight} onChangeKg={setWeight} unit={profile?.unitSystem ?? 'metric'} min={0} />
         </label>
         <label className="block">
           <span className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Steps</span>

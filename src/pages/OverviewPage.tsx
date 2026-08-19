@@ -3,6 +3,7 @@ import { Flame, Clock, Target, TrendingUp, Pencil, Zap } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { calcDailyTargets, GOAL_LABELS, todayISO } from '../lib/calc';
 import { computeStreaks, computeRestDayInsight } from '../lib/streaks';
+import { displayWeight, formatHeight, formatWeight, weightUnitLabel } from '../lib/units';
 import Card from '../components/ui/Card';
 import StatTile from '../components/ui/StatTile';
 import CalorieRing from '../components/charts/CalorieRing';
@@ -89,11 +90,14 @@ export default function OverviewPage() {
       <Card>
         <div className="flex flex-wrap gap-x-8 gap-y-3">
           <SummaryStat label="Age" value={`${profile.age}`} />
-          <SummaryStat label="Height" value={`${profile.heightCm} cm`} />
-          <SummaryStat label="Weight" value={`${profile.weightKg} kg`} />
+          <SummaryStat label="Height" value={formatHeight(profile.heightCm, profile.unitSystem)} />
+          <SummaryStat label="Weight" value={formatWeight(profile.weightKg, profile.unitSystem)} />
           <SummaryStat label="Goal" value={GOAL_LABELS[profile.goal]} />
           {profile.targetWeightKg && (
-            <SummaryStat label="Target" value={`${profile.targetWeightKg} kg in ${profile.timeframeWeeks}w`} />
+            <SummaryStat
+              label="Target"
+              value={`${formatWeight(profile.targetWeightKg, profile.unitSystem)} in ${profile.timeframeWeeks}w`}
+            />
           )}
         </div>
         {profile.expectations && (
@@ -114,8 +118,8 @@ export default function OverviewPage() {
         <StatTile
           icon={Target}
           label="Weight Change"
-          value={`${weightDelta >= 0 ? '+' : ''}${weightDelta.toFixed(1)}`}
-          sub={`kg since ${weightHistory[0] ? new Date(weightHistory[0].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'start'}`}
+          value={`${weightDelta >= 0 ? '+' : ''}${displayWeight(weightDelta, profile.unitSystem).toFixed(1)}`}
+          sub={`${weightUnitLabel(profile.unitSystem)} since ${weightHistory[0] ? new Date(weightHistory[0].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'start'}`}
           accent="var(--series-4)"
         />
         <StatTile icon={Zap} label="Current Streak" value={`${streaks.currentStreak}d`} sub="days logged in a row" accent="var(--brand-lime)" />

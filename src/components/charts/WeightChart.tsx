@@ -1,8 +1,9 @@
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
-import type { WeightEntry } from '../../types';
+import type { UnitSystem, WeightEntry } from '../../types';
 import { format, parseISO } from 'date-fns';
+import { displayWeight, weightUnitLabel } from '../../lib/units';
 
-export default function WeightChart({ data }: { data: WeightEntry[] }) {
+export default function WeightChart({ data, unit = 'metric' }: { data: WeightEntry[]; unit?: UnitSystem }) {
   if (data.length < 2) {
     return (
       <div className="h-48 flex items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>
@@ -14,7 +15,10 @@ export default function WeightChart({ data }: { data: WeightEntry[] }) {
   const chartData = data
     .slice()
     .sort((a, b) => a.date.localeCompare(b.date))
-    .map((d) => ({ ...d, label: format(parseISO(d.date), 'MMM d') }));
+    .map((d) => ({
+      label: format(parseISO(d.date), 'MMM d'),
+      weight: Math.round(displayWeight(d.weightKg, unit) * 10) / 10,
+    }));
 
   return (
     <div className="h-48">
@@ -42,11 +46,11 @@ export default function WeightChart({ data }: { data: WeightEntry[] }) {
               fontSize: 12,
               color: 'var(--text-primary)',
             }}
-            formatter={(value) => [`${value} kg`, 'Weight']}
+            formatter={(value) => [`${value} ${weightUnitLabel(unit)}`, 'Weight']}
           />
           <Line
             type="monotone"
-            dataKey="weightKg"
+            dataKey="weight"
             stroke="var(--series-1)"
             strokeWidth={2}
             dot={{ r: 3, fill: 'var(--series-1)' }}

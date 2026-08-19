@@ -4,6 +4,8 @@ export type Goal = 'lose_fat' | 'maintain' | 'build_muscle' | 'improve_endurance
 
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
 
+export type UnitSystem = 'metric' | 'imperial';
+
 export interface Profile {
   name: string;
   age: number;
@@ -16,6 +18,7 @@ export interface Profile {
   expectations: string;
   activityLevel: ActivityLevel;
   preferredDaysPerWeek: number;
+  unitSystem: UnitSystem;
   createdAt: string;
 }
 

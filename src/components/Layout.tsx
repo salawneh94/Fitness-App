@@ -13,6 +13,16 @@ const NAV_ITEMS = [
 export default function Layout() {
   const profile = useAppStore((s) => s.profile);
 
+  // No profile yet means the onboarding wizard is rendering at /profile —
+  // give it the full screen instead of surrounding it with nav to routes it can't reach.
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-neutral-950 text-gray-900 dark:text-gray-100">
+        <Outlet />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 dark:bg-neutral-950 text-gray-900 dark:text-gray-100">
       <aside className="hidden md:flex md:w-60 md:min-h-screen border-r border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 md:flex-col">

@@ -3,6 +3,7 @@ import { Flame, Award, CalendarCheck, Camera, Trash2, Plus } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore';
 import { computeStreaks } from '../lib/streaks';
 import { estimate1RM, todayISO, STEP_GOAL, SLEEP_GOAL_HOURS } from '../lib/calc';
+import { displayWeight, weightUnitLabel } from '../lib/units';
 import { resizeImageFile } from '../lib/imageResize';
 import { savePhotoBlob, getPhotoBlob, deletePhotoBlob } from '../lib/photoStore';
 import Card from '../components/ui/Card';
@@ -55,8 +56,8 @@ export default function ProgressPage() {
     }
     return Array.from(byDate.entries())
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, value]) => ({ date, value }));
-  }, [workoutLogs, selectedExercise]);
+      .map(([date, value]) => ({ date, value: Math.round(displayWeight(value, profile.unitSystem) * 10) / 10 }));
+  }, [workoutLogs, selectedExercise, profile.unitSystem]);
 
   return (
     <div className="space-y-6">
@@ -97,7 +98,7 @@ export default function ProgressPage() {
       </Card>
 
       <Card title="Weight Trend">
-        <WeightChart data={weightHistory} />
+        <WeightChart data={weightHistory} unit={profile.unitSystem} />
       </Card>
 
       <Card title="Strength Progress (estimated 1-rep max)">
@@ -116,7 +117,7 @@ export default function ProgressPage() {
                 <option key={ex.id} value={ex.id}>{ex.name}</option>
               ))}
             </select>
-            <StrengthChart data={strengthData} />
+            <StrengthChart data={strengthData} unit={weightUnitLabel(profile.unitSystem)} />
           </>
         )}
       </Card>

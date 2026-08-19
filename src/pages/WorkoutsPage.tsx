@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { PlayCircle, Plus, X, Trash2, Clock, Minus } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import type { Exercise, ExerciseLogEntry, ScheduledWorkout, Weekday } from '../types';
+import type { Exercise, ExerciseLogEntry, ScheduledWorkout, UnitSystem, Weekday } from '../types';
 import { EXERCISE_LIBRARY } from '../data/exercises';
 import { todayISO } from '../lib/calc';
 import { computeRestDayInsight } from '../lib/streaks';
+import { displayWeight, toKgFromDisplay, weightUnitLabel } from '../lib/units';
 import Card from '../components/ui/Card';
 import RestDayBanner from '../components/RestDayBanner';
 
@@ -15,6 +16,7 @@ function uid() {
 }
 
 export default function WorkoutsPage() {
+  const profile = useAppStore((s) => s.profile);
   const scheduledWorkouts = useAppStore((s) => s.scheduledWorkouts);
   const setScheduledWorkouts = useAppStore((s) => s.setScheduledWorkouts);
   const workoutLogs = useAppStore((s) => s.workoutLogs);
@@ -98,6 +100,7 @@ export default function WorkoutsPage() {
       {loggingDay && (
         <LogWorkoutModal
           workout={loggingDay}
+          unit={profile?.unitSystem ?? 'metric'}
           onClose={() => setLoggingDay(null)}
           onSave={(durationMin, caloriesBurned, notes, exerciseLogs) => {
             addWorkoutLog({ date: todayISO(), workoutName: loggingDay.name, durationMin, caloriesBurned, notes, exerciseLogs });
@@ -284,10 +287,12 @@ function EditDayModal({
 
 function LogWorkoutModal({
   workout,
+  unit,
   onClose,
   onSave,
 }: {
   workout: ScheduledWorkout;
+  unit: UnitSystem;
   onClose: () => void;
   onSave: (
     durationMin: number,
@@ -395,12 +400,12 @@ function LogWorkoutModal({
                           type="number"
                           min={0}
                           step={0.5}
-                          placeholder="kg"
+                          placeholder={weightUnitLabel(unit)}
                           className="w-20 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-2 py-1 text-sm"
-                          value={s.weightKg || ''}
-                          onChange={(e) => updateSet(ex.id, idx, 'weightKg', Number(e.target.value))}
+                          value={s.weightKg ? Math.round(displayWeight(s.weightKg, unit) * 10) / 10 : ''}
+                          onChange={(e) => updateSet(ex.id, idx, 'weightKg', toKgFromDisplay(Number(e.target.value), unit))}
                         />
-                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>kg ×</span>
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{weightUnitLabel(unit)} ×</span>
                         <input
                           type="number"
                           min={0}

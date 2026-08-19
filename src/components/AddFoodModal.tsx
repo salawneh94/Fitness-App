@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { X, ScanBarcode, PenLine, Loader2, CheckCircle2, Utensils } from 'lucide-react';
-import BarcodeScannerModal from './BarcodeScannerModal';
+
+const BarcodeScannerModal = lazy(() => import('./BarcodeScannerModal'));
 import { lookupBarcode, type ScannedProduct } from '../lib/foodApi';
 import type { FoodEntry, MealType } from '../types';
 import { useAppStore } from '../store/useAppStore';
@@ -182,7 +183,9 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
         )}
 
         {mode === 'scan' && (
-          <BarcodeScannerModal onDetected={handleDetected} onClose={() => setMode('choose')} />
+          <Suspense fallback={<div className="py-10 text-center text-sm" style={{ color: 'var(--text-muted)' }}>Loading camera…</div>}>
+            <BarcodeScannerModal onDetected={handleDetected} onClose={() => setMode('choose')} />
+          </Suspense>
         )}
 
         {mode === 'confirmScanned' && scanned && (

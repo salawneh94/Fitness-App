@@ -2,10 +2,14 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Download, Upload, Loader2 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import type { ActivityLevel, Goal, Profile, Sex } from '../types';
+import type { ActivityLevel, Goal, Profile, Sex, UnitSystem } from '../types';
 import { ACTIVITY_LABELS, GOAL_LABELS, bmi, calcDailyTargets } from '../lib/calc';
 import { exportAllData, importAllData } from '../lib/exportImport';
 import Card from '../components/ui/Card';
+import WeightInput from '../components/ui/WeightInput';
+import HeightInput from '../components/ui/HeightInput';
+import UnitToggle from '../components/ui/UnitToggle';
+import OnboardingWizard from './OnboardingWizard';
 
 const GOALS: Goal[] = ['lose_fat', 'build_muscle', 'maintain', 'improve_endurance', 'general_health'];
 const ACTIVITIES: ActivityLevel[] = ['sedentary', 'light', 'moderate', 'active', 'very_active'];
@@ -24,6 +28,13 @@ const inputCls =
 
 export default function ProfilePage() {
   const existing = useAppStore((s) => s.profile);
+  // First-time setup uses the step-by-step wizard; editing an existing profile uses this single-page form.
+  if (!existing) return <OnboardingWizard />;
+  return <EditProfileForm />;
+}
+
+function EditProfileForm() {
+  const existing = useAppStore((s) => s.profile);
   const setProfile = useAppStore((s) => s.setProfile);
   const navigate = useNavigate();
 
@@ -40,6 +51,7 @@ export default function ProfilePage() {
       existing?.expectations ?? '',
     activityLevel: (existing?.activityLevel ?? 'moderate') as ActivityLevel,
     preferredDaysPerWeek: existing?.preferredDaysPerWeek ?? 4,
+    unitSystem: (existing?.unitSystem ?? 'metric') as UnitSystem,
   });
 
   function submit(e: React.FormEvent) {
@@ -71,7 +83,7 @@ export default function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-        {existing ? 'Edit Profile' : 'Welcome — let’s set up your profile'}
+        Edit Profile
       </h1>
       <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
         This powers your calorie & macro targets and personalizes your dashboard.
@@ -79,6 +91,9 @@ export default function ProfilePage() {
 
       <form onSubmit={submit} className="space-y-6">
         <Card title="About you">
+          <div className="flex justify-end mb-4">
+            <UnitToggle value={form.unitSystem} onChange={(unitSystem) => setForm((f) => ({ ...f, unitSystem }))} />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <Field label="Name">
@@ -113,27 +128,18 @@ export default function ProfilePage() {
                 <option value="other">Other</option>
               </select>
             </Field>
-            <Field label="Height (cm)">
-              <input
-                required
-                type="number"
-                min={100}
-                max={250}
-                className={inputCls}
-                value={form.heightCm}
-                onChange={(e) => setForm((f) => ({ ...f, heightCm: Number(e.target.value) }))}
+            <Field label="Height">
+              <HeightInput
+                valueCm={form.heightCm}
+                onChangeCm={(heightCm) => setForm((f) => ({ ...f, heightCm: heightCm === '' ? 0 : heightCm }))}
+                unit={form.unitSystem}
               />
             </Field>
-            <Field label="Current Weight (kg)">
-              <input
-                required
-                type="number"
-                min={30}
-                max={300}
-                step={0.1}
-                className={inputCls}
-                value={form.weightKg}
-                onChange={(e) => setForm((f) => ({ ...f, weightKg: Number(e.target.value) }))}
+            <Field label="Current Weight">
+              <WeightInput
+                valueKg={form.weightKg}
+                onChangeKg={(weightKg) => setForm((f) => ({ ...f, weightKg: weightKg === '' ? 0 : weightKg }))}
+                unit={form.unitSystem}
               />
             </Field>
           </div>
@@ -154,15 +160,11 @@ export default function ProfilePage() {
                 </select>
               </Field>
             </div>
-            <Field label="Target weight (kg)">
-              <input
-                type="number"
-                min={30}
-                max={300}
-                step={0.1}
-                className={inputCls}
-                value={form.targetWeightKg}
-                onChange={(e) => setForm((f) => ({ ...f, targetWeightKg: Number(e.target.value) }))}
+            <Field label="Target weight">
+              <WeightInput
+                valueKg={form.targetWeightKg}
+                onChangeKg={(targetWeightKg) => setForm((f) => ({ ...f, targetWeightKg: targetWeightKg === '' ? 0 : targetWeightKg }))}
+                unit={form.unitSystem}
               />
             </Field>
             <Field label="Timeframe (weeks)">
@@ -244,7 +246,7 @@ export default function ProfilePage() {
           type="submit"
           className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 rounded-full transition-colors"
         >
-          {existing ? 'Save Changes' : 'Start Tracking'}
+          Save Changes
         </button>
       </form>
 
