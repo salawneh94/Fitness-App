@@ -58,3 +58,15 @@ export function formatHeight(cm: number, unit: UnitSystem): string {
   }
   return `${Math.round(cm)} cm`;
 }
+
+export function lengthUnitLabel(unit: UnitSystem): string {
+  return unit === 'imperial' ? 'in' : 'cm';
+}
+
+export function displayLength(cm: number, unit: UnitSystem): number {
+  return unit === 'imperial' ? cmToIn(cm) : cm;
+}
+
+export function toCmFromDisplay(value: number, unit: UnitSystem): number {
+  return unit === 'imperial' ? inToCm(value) : value;
+}

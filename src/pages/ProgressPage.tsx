@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Flame, Award, CalendarCheck, Camera, Trash2, Plus } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { computeStreaks } from '../lib/streaks';
-import { estimate1RM, todayISO, STEP_GOAL, SLEEP_GOAL_HOURS } from '../lib/calc';
+import { estimate1RM, todayISO, calcDailyTargets, STEP_GOAL, SLEEP_GOAL_HOURS } from '../lib/calc';
 import { displayWeight, weightUnitLabel } from '../lib/units';
 import { resizeImageFile } from '../lib/imageResize';
 import { savePhotoBlob, getPhotoBlob, deletePhotoBlob } from '../lib/photoStore';
@@ -11,6 +11,8 @@ import StatTile from '../components/ui/StatTile';
 import WeightChart from '../components/charts/WeightChart';
 import StrengthChart from '../components/charts/StrengthChart';
 import RingGauge from '../components/charts/RingGauge';
+import CalorieTrendChart from '../components/charts/CalorieTrendChart';
+import MeasurementsCard from '../components/MeasurementsCard';
 
 export default function ProgressPage() {
   const profile = useAppStore((s) => s.profile);
@@ -97,9 +99,15 @@ export default function ProgressPage() {
         </p>
       </Card>
 
+      <Card title="Calorie Trend">
+        <CalorieTrendChart foodEntries={foodEntries} targetCalories={calcDailyTargets(profile).calories} />
+      </Card>
+
       <Card title="Weight Trend">
         <WeightChart data={weightHistory} unit={profile.unitSystem} />
       </Card>
+
+      <MeasurementsCard unit={profile.unitSystem} />
 
       <Card title="Strength Progress (estimated 1-rep max)">
         {exerciseOptions.length === 0 ? (

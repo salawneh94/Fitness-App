@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
+  BodyMeasurementEntry,
   FoodEntry,
   MealType,
   Profile,
@@ -28,6 +29,7 @@ interface AppState {
   weightHistory: WeightEntry[];
   stepsHistory: StepsEntry[];
   sleepHistory: SleepEntry[];
+  measurementsHistory: BodyMeasurementEntry[];
   foodEntries: FoodEntry[];
   scheduledWorkouts: ScheduledWorkout[];
   workoutLogs: WorkoutLogEntry[];
@@ -38,6 +40,7 @@ interface AppState {
   updateWeight: (weightKg: number) => void;
   updateSteps: (steps: number) => void;
   updateSleep: (hours: number) => void;
+  updateMeasurement: (fields: Omit<BodyMeasurementEntry, 'date'>) => void;
 
   addFoodEntry: (entry: Omit<FoodEntry, 'id' | 'loggedAt'>) => void;
   removeFoodEntry: (id: string) => void;
@@ -65,6 +68,7 @@ export const useAppStore = create<AppState>()(
       weightHistory: [],
       stepsHistory: [],
       sleepHistory: [],
+      measurementsHistory: [],
       foodEntries: [],
       scheduledWorkouts: [],
       workoutLogs: [],
@@ -97,6 +101,15 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           sleepHistory: upsertByDate(state.sleepHistory, { date: todayISO(), hours }),
         })),
+
+      updateMeasurement: (fields) =>
+        set((state) => {
+          const date = todayISO();
+          const existing = state.measurementsHistory.find((m) => m.date === date);
+          return {
+            measurementsHistory: upsertByDate(state.measurementsHistory, { date, ...existing, ...fields }),
+          };
+        }),
 
       addFoodEntry: (entry) =>
         set((state) => ({

@@ -37,6 +37,17 @@ export interface SleepEntry {
   hours: number;
 }
 
+export type MeasurementKey = 'waistCm' | 'chestCm' | 'armsCm' | 'hipsCm' | 'thighsCm';
+
+export interface BodyMeasurementEntry {
+  date: string; // ISO date
+  waistCm?: number;
+  chestCm?: number;
+  armsCm?: number;
+  hipsCm?: number;
+  thighsCm?: number;
+}
+
 export interface Micronutrients {
   fiberG?: number;
   sugarG?: number;
