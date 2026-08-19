@@ -13,6 +13,7 @@ import StrengthChart from '../components/charts/StrengthChart';
 import RingGauge from '../components/charts/RingGauge';
 import CalorieTrendChart from '../components/charts/CalorieTrendChart';
 import MeasurementsCard from '../components/MeasurementsCard';
+import PhotoCompareSlider from '../components/PhotoCompareSlider';
 
 export default function ProgressPage() {
   const profile = useAppStore((s) => s.profile);
@@ -131,6 +132,7 @@ export default function ProgressPage() {
       </Card>
 
       <PhotosCard photos={progressPhotos} onAdd={addProgressPhoto} onRemove={removeProgressPhoto} />
+      <PhotoCompareSlider photos={progressPhotos} />
     </div>
   );
 }
