@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { PlayCircle, Plus, X, Trash2, Clock, Minus } from 'lucide-react';
+import { lazy, Suspense, useState } from 'react';
+import { PlayCircle, Plus, X, Trash2, Clock, Minus, Zap } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import type { Exercise, ExerciseLogEntry, ScheduledWorkout, UnitSystem, Weekday } from '../types';
 import { EXERCISE_LIBRARY } from '../data/exercises';
@@ -8,6 +8,8 @@ import { computeRestDayInsight } from '../lib/streaks';
 import { displayWeight, toKgFromDisplay, weightUnitLabel } from '../lib/units';
 import Card from '../components/ui/Card';
 import RestDayBanner from '../components/RestDayBanner';
+
+const GuidedWorkoutPlayer = lazy(() => import('../components/GuidedWorkoutPlayer'));
 
 const WEEKDAYS: Weekday[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -26,6 +28,7 @@ export default function WorkoutsPage() {
   const [activeDay, setActiveDay] = useState<Weekday | null>(null);
   const [editingDay, setEditingDay] = useState<Weekday | null>(null);
   const [loggingDay, setLoggingDay] = useState<ScheduledWorkout | null>(null);
+  const [playingWorkout, setPlayingWorkout] = useState<ScheduledWorkout | null>(null);
 
   const workoutForDay = (day: Weekday) => scheduledWorkouts.find((w) => w.day === day);
   const restInsight = computeRestDayInsight(workoutLogs);
@@ -85,6 +88,10 @@ export default function WorkoutsPage() {
             setLoggingDay(w);
             setActiveDay(null);
           }}
+          onPlay={(w) => {
+            setPlayingWorkout(w);
+            setActiveDay(null);
+          }}
         />
       )}
 
@@ -107,6 +114,20 @@ export default function WorkoutsPage() {
             setLoggingDay(null);
           }}
         />
+      )}
+
+      {playingWorkout && (
+        <Suspense fallback={<div className="fixed inset-0 z-50 bg-black" />}>
+          <GuidedWorkoutPlayer
+            workout={playingWorkout}
+            unit={profile?.unitSystem ?? 'metric'}
+            onCancel={() => setPlayingWorkout(null)}
+            onFinish={(durationMin, exerciseLogs, caloriesBurned, notes) => {
+              addWorkoutLog({ date: todayISO(), workoutName: playingWorkout.name, durationMin, caloriesBurned, notes, exerciseLogs });
+              setPlayingWorkout(null);
+            }}
+          />
+        </Suspense>
       )}
 
       <Card title="Recent Activity">
@@ -144,12 +165,14 @@ function DayDetailModal({
   onClose,
   onEdit,
   onLog,
+  onPlay,
 }: {
   day: Weekday;
   workout?: ScheduledWorkout;
   onClose: () => void;
   onEdit: () => void;
   onLog: (w: ScheduledWorkout) => void;
+  onPlay: (w: ScheduledWorkout) => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
@@ -184,11 +207,17 @@ function DayDetailModal({
               ))}
             </ul>
             <div className="flex gap-2">
-              <button onClick={onEdit} className="flex-1 py-2.5 rounded-lg border border-gray-300 dark:border-neutral-700 text-sm font-medium">
+              <button onClick={onEdit} className="py-2.5 px-4 rounded-lg border border-gray-300 dark:border-neutral-700 text-sm font-medium">
                 Edit
               </button>
-              <button onClick={() => onLog(workout)} className="flex-1 py-2.5 rounded-full bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold">
+              <button onClick={() => onLog(workout)} className="flex-1 py-2.5 rounded-full border border-orange-600 text-orange-600 dark:text-orange-400 text-sm font-semibold">
                 Log as done
+              </button>
+              <button
+                onClick={() => onPlay(workout)}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-full bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold"
+              >
+                <Zap size={15} /> Start Workout
               </button>
             </div>
           </>
