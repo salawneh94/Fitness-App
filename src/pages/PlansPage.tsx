@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { CheckCircle2, PlayCircle, Dumbbell, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PLAN_TEMPLATES } from '../data/planTemplates';
-import type { ScheduledWorkout, Weekday } from '../types';
+import type { Exercise, ScheduledWorkout, Weekday } from '../types';
 import { useAppStore } from '../store/useAppStore';
 import { recommendPlan } from '../lib/planRecommendation';
 import Card from '../components/ui/Card';
+import ExerciseVideoModal from '../components/ExerciseVideoModal';
 
 const WEEKDAYS: Weekday[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -19,6 +20,7 @@ export default function PlansPage() {
   const recommendation = profile ? recommendPlan(profile) : null;
   const [expandedId, setExpandedId] = useState<string | null>(recommendation?.template.id ?? PLAN_TEMPLATES[0]?.id ?? null);
   const [appliedId, setAppliedId] = useState<string | null>(null);
+  const [videoExercise, setVideoExercise] = useState<Exercise | null>(null);
   const navigate = useNavigate();
 
   function applyPlan(templateId: string) {
@@ -102,15 +104,13 @@ export default function PlansPage() {
                           {d.exercises.map((ex) => (
                             <li key={ex.id} className="flex items-center justify-between text-sm">
                               <span style={{ color: 'var(--text-primary)' }}>{ex.name}</span>
-                              <a
-                                href={ex.videoUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <button
+                                onClick={() => setVideoExercise(ex)}
                                 className="text-orange-600 dark:text-orange-400 shrink-0"
                                 aria-label={`Watch demo for ${ex.name}`}
                               >
                                 <PlayCircle size={15} />
-                              </a>
+                              </button>
                             </li>
                           ))}
                         </ul>
@@ -137,6 +137,7 @@ export default function PlansPage() {
           );
         })}
       </div>
+      {videoExercise && <ExerciseVideoModal exercise={videoExercise} onClose={() => setVideoExercise(null)} />}
     </div>
   );
 }

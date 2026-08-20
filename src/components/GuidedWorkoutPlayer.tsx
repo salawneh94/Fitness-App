@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { X, Play, Pause, SkipForward, ChevronLeft, ChevronRight, PlayCircle, Plus, Check } from 'lucide-react';
 import type { ExerciseLogEntry, ScheduledWorkout, UnitSystem } from '../types';
 import { displayWeight, toKgFromDisplay, weightUnitLabel } from '../lib/units';
+import ExerciseVideoModal from './ExerciseVideoModal';
 
 const REST_PRESETS = [30, 60, 90, 120, 180];
 
@@ -35,6 +36,7 @@ export default function GuidedWorkoutPlayer({
 
   const [draftWeight, setDraftWeight] = useState<number | ''>('');
   const [draftReps, setDraftReps] = useState<number | ''>('');
+  const [showVideo, setShowVideo] = useState(false);
 
   const exercise = workout.exercises[exerciseIndex];
   const isLast = exerciseIndex === workout.exercises.length - 1;
@@ -169,14 +171,13 @@ export default function GuidedWorkoutPlayer({
             <p className="text-white/60 mb-6">
               {exercise.sets && exercise.reps ? `${exercise.sets} sets × ${exercise.reps}` : exercise.notes ?? 'Log your sets below'}
             </p>
-            <a
-              href={exercise.videoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => setShowVideo(true)}
               className="flex items-center gap-1.5 text-sm text-orange-400 mb-8"
             >
               <PlayCircle size={16} /> Watch demo
-            </a>
+            </button>
+            {showVideo && <ExerciseVideoModal exercise={exercise} onClose={() => setShowVideo(false)} />}
 
             {setsForExercise.length > 0 && (
               <div className="flex flex-wrap justify-center gap-2 mb-6">

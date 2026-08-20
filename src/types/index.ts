@@ -99,7 +99,8 @@ export interface Exercise {
   name: string;
   category: ExerciseCategory;
   equipment: string;
-  videoUrl: string; // YouTube embed URL
+  videoUrl: string; // YouTube search fallback, used when videoId is absent or the embed fails
+  videoId?: string; // Verified YouTube video ID, embedded in-app via ExerciseVideoModal
   sets?: number;
   reps?: string;
   notes?: string;

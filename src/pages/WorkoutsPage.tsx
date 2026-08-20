@@ -8,6 +8,7 @@ import { computeRestDayInsight } from '../lib/streaks';
 import { displayWeight, toKgFromDisplay, weightUnitLabel } from '../lib/units';
 import Card from '../components/ui/Card';
 import RestDayBanner from '../components/RestDayBanner';
+import ExerciseVideoModal from '../components/ExerciseVideoModal';
 
 const GuidedWorkoutPlayer = lazy(() => import('../components/GuidedWorkoutPlayer'));
 
@@ -174,6 +175,8 @@ function DayDetailModal({
   onLog: (w: ScheduledWorkout) => void;
   onPlay: (w: ScheduledWorkout) => void;
 }) {
+  const [videoExercise, setVideoExercise] = useState<Exercise | null>(null);
+
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
@@ -195,17 +198,16 @@ function DayDetailModal({
                       {ex.equipment} {ex.sets && ex.reps ? `· ${ex.sets} × ${ex.reps}` : ex.notes ? `· ${ex.notes}` : ''}
                     </p>
                   </div>
-                  <a
-                    href={ex.videoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() => setVideoExercise(ex)}
                     className="flex items-center gap-1 text-xs font-medium text-orange-600 dark:text-orange-400 shrink-0"
                   >
                     <PlayCircle size={16} /> Demo
-                  </a>
+                  </button>
                 </li>
               ))}
             </ul>
+            {videoExercise && <ExerciseVideoModal exercise={videoExercise} onClose={() => setVideoExercise(null)} />}
             <div className="flex gap-2">
               <button onClick={onEdit} className="py-2.5 px-4 rounded-lg border border-gray-300 dark:border-neutral-700 text-sm font-medium">
                 Edit
