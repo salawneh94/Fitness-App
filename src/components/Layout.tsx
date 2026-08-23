@@ -24,12 +24,11 @@ export default function Layout() {
   }
 
   return (
-    // The document itself never scrolls here (overflow-hidden + a fixed dvh height) — only
-    // `main` does, internally. Real iOS Safari collapses/expands its toolbar in response to
-    // the *document* scrolling, which desyncs position:fixed elements' visual position from
-    // where they actually receive touches (they render fine, taps just land on nothing). By
-    // keeping the document static and scrolling only the inner content pane, the toolbar never
-    // moves during use, so the mobile bottom nav below stays reliably tappable on real devices.
+    // The mobile bottom nav (below) is deliberately rendered as a SIBLING of this div, not a
+    // child inside it — a position:fixed element nested inside an overflow-hidden/flex ancestor
+    // has a real history of WebKit-specific hit-testing bugs (renders in the right spot, but
+    // touches don't land on it), so it lives entirely outside that container to rule that out.
+    <>
     <div className="h-dvh flex flex-col md:flex-row overflow-hidden bg-gray-50 dark:bg-neutral-950 text-gray-900 dark:text-gray-100">
       <aside className="hidden md:flex md:w-60 border-r border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 md:flex-col">
         <div className="flex items-center gap-2 px-5 py-5 border-b border-gray-200 dark:border-neutral-800">
@@ -74,35 +73,29 @@ export default function Layout() {
       <main className="flex-1 min-w-0 overflow-y-auto p-4 md:p-8 pb-28 md:pb-8 max-w-6xl mx-auto w-full">
         <Outlet />
       </main>
+    </div>
 
-      {/* Mobile floating bottom nav. Bottom offset accounts for the iOS home-indicator
-          safe area — without it, real touches near the bottom edge on iPhone get
-          swallowed by the system swipe-up gesture instead of reaching this nav. */}
-      <nav
-        className="md:hidden fixed left-4 right-4 z-40"
-        style={{ bottom: 'max(1rem, calc(env(safe-area-inset-bottom, 0px) + 0.5rem))' }}
-      >
-        <div className="flex items-center justify-between gap-1 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-full px-2 py-2 shadow-lg shadow-gray-300/40 dark:shadow-black/40">
-          {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              aria-label={label}
-              className={({ isActive }) =>
-                `flex items-center justify-center w-11 h-11 rounded-full transition-colors ${
-                  isActive
-                    ? 'bg-orange-600 text-white'
-                    : 'text-gray-400 dark:text-gray-500'
-                }`
-              }
-            >
-              <Icon size={20} />
-            </NavLink>
-          ))}
+    {/* Mobile floating bottom nav, deliberately a sibling of the div above (see comment there).
+        Bottom offset accounts for the iOS home-indicator safe area — without it, real touches
+        near the bottom edge on iPhone get swallowed by the system swipe-up gesture instead of
+        reaching this nav. Promoted to its own compositing layer (transform + backface-visibility)
+        since plain position:fixed elements have a known history of unreliable touch hit-testing
+        on real WebKit that never reproduces in Chromium-based testing. */}
+    <nav
+      className="md:hidden fixed left-4 right-4 z-40"
+      style={{
+        bottom: 'max(1rem, calc(env(safe-area-inset-bottom, 0px) + 0.5rem))',
+        transform: 'translateZ(0)',
+        WebkitBackfaceVisibility: 'hidden',
+      }}
+    >
+      <div className="flex items-center justify-between gap-1 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-full px-2 py-2 shadow-lg shadow-gray-300/40 dark:shadow-black/40">
+        {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
           <NavLink
-            to="/profile"
-            aria-label="Profile"
+            key={to}
+            to={to}
+            end={end}
+            aria-label={label}
             className={({ isActive }) =>
               `flex items-center justify-center w-11 h-11 rounded-full transition-colors ${
                 isActive
@@ -111,10 +104,24 @@ export default function Layout() {
               }`
             }
           >
-            <UserRound size={20} />
+            <Icon size={20} />
           </NavLink>
-        </div>
-      </nav>
-    </div>
+        ))}
+        <NavLink
+          to="/profile"
+          aria-label="Profile"
+          className={({ isActive }) =>
+            `flex items-center justify-center w-11 h-11 rounded-full transition-colors ${
+              isActive
+                ? 'bg-orange-600 text-white'
+                : 'text-gray-400 dark:text-gray-500'
+            }`
+          }
+        >
+          <UserRound size={20} />
+        </NavLink>
+      </div>
+    </nav>
+    </>
   );
 }
