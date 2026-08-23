@@ -221,7 +221,10 @@ export default function GuidedWorkoutPlayer({
         )}
       </div>
 
-      <div className="flex items-center justify-between px-6 py-6 gap-3">
+      <div
+        className="flex items-center justify-between px-6 pt-6 gap-3"
+        style={{ paddingBottom: 'max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 1rem))' }}
+      >
         <button
           onClick={goPrev}
           disabled={exerciseIndex === 0}
