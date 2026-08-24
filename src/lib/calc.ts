@@ -96,6 +96,17 @@ export function todayISO(): string {
  * as UTC — so at UTC+3, adding a day returns *the same date string*. Any loop advancing a cursor
  * with it then never terminates and freezes the tab.
  */
+/**
+ * Turn a YYYY-MM-DD calendar date into a Date at local midnight, for display formatting.
+ *
+ * `new Date('2026-08-24')` is specified to parse as UTC midnight, which then renders as the
+ * previous day for anyone west of Greenwich — so build the date from its parts instead.
+ */
+export function parseISODate(iso: string): Date {
+  const [year, month, day] = iso.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 export function addDaysISO(iso: string, delta: number): string {
   const [year, month, day] = iso.split('-').map(Number);
   const d = new Date(Date.UTC(year, month - 1, day));

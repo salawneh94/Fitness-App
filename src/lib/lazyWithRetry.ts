@@ -17,6 +17,31 @@ const RELOAD_FLAG = 'fittrack-chunk-reloaded';
  * genuinely broken build can't put the tab into a reload loop — the second failure is
  * rethrown for the ErrorBoundary to render.
  */
+/**
+ * Warm the other routes' chunks once the app is idle.
+ *
+ * Code-splitting keeps the first paint cheap, but it moves the download cost to the moment the
+ * user taps a tab — which is what makes navigation feel sluggish on a phone. Fetching the
+ * remaining pages during idle time means the chunk is already cached when they do.
+ */
+export function prefetchWhenIdle(factories: Array<() => Promise<unknown>>) {
+  if (typeof window === 'undefined') return;
+
+  const run = () => {
+    for (const load of factories) {
+      // Failures here are irrelevant — the real navigation will surface and handle them.
+      load().catch(() => {});
+    }
+  };
+
+  const ric = (window as unknown as {
+    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+  }).requestIdleCallback;
+
+  if (typeof ric === 'function') ric(run, { timeout: 4000 });
+  else window.setTimeout(run, 2000);
+}
+
 export function lazyWithRetry<T extends ComponentType<unknown>>(factory: () => Promise<{ default: T }>) {
   return lazy(async () => {
     try {

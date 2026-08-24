@@ -1,18 +1,25 @@
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
-import { lazyWithRetry } from './lib/lazyWithRetry';
+import { lazyWithRetry, prefetchWhenIdle } from './lib/lazyWithRetry';
 import { useAppStore } from './store/useAppStore';
+
+const loadOverview = () => import('./pages/OverviewPage');
+const loadNutrition = () => import('./pages/NutritionPage');
+const loadWorkouts = () => import('./pages/WorkoutsPage');
+const loadPlans = () => import('./pages/PlansPage');
+const loadProgress = () => import('./pages/ProgressPage');
+const loadProfile = () => import('./pages/ProfilePage');
 
 const SplashPage = lazyWithRetry(() => import('./pages/SplashPage'));
 const LoginPage = lazyWithRetry(() => import('./pages/LoginPage'));
-const OverviewPage = lazyWithRetry(() => import('./pages/OverviewPage'));
-const NutritionPage = lazyWithRetry(() => import('./pages/NutritionPage'));
-const WorkoutsPage = lazyWithRetry(() => import('./pages/WorkoutsPage'));
-const PlansPage = lazyWithRetry(() => import('./pages/PlansPage'));
-const ProgressPage = lazyWithRetry(() => import('./pages/ProgressPage'));
-const ProfilePage = lazyWithRetry(() => import('./pages/ProfilePage'));
+const OverviewPage = lazyWithRetry(loadOverview);
+const NutritionPage = lazyWithRetry(loadNutrition);
+const WorkoutsPage = lazyWithRetry(loadWorkouts);
+const PlansPage = lazyWithRetry(loadPlans);
+const ProgressPage = lazyWithRetry(loadProgress);
+const ProfilePage = lazyWithRetry(loadProfile);
 
 function RequireProfile({ children }: { children: React.ReactNode }) {
   const profile = useAppStore((s) => s.profile);
@@ -29,6 +36,12 @@ function PageFallback() {
 }
 
 function App() {
+  // Warm the remaining route chunks once the first page has settled, so tapping a tab doesn't
+  // pay a download before it can render.
+  useEffect(() => {
+    prefetchWhenIdle([loadOverview, loadNutrition, loadWorkouts, loadPlans, loadProgress, loadProfile]);
+  }, []);
+
   return (
     <ErrorBoundary>
     <HashRouter>

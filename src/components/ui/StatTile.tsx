@@ -23,7 +23,10 @@ export default function StatTile({
       </div>
       <div className="min-w-0">
         <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{label}</p>
-        <p className="text-2xl font-bold tabular-nums truncate" style={{ color: 'var(--text-primary)' }}>{value}</p>
+        {/* Not truncated: this is the headline number, and clipping it to something like "10…"
+            is worse than letting it size down. Slightly smaller on narrow screens so two tiles
+            still fit side by side. */}
+        <p className="text-xl sm:text-2xl font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>{value}</p>
         {sub && <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{sub}</p>}
       </div>
     </div>

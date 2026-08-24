@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
-import { format } from 'date-fns';
 import type { FoodEntry } from '../../types';
 import { toISODate } from '../../lib/calc';
+import SimpleBarChart from './SimpleBarChart';
 
 function addDays(date: Date, delta: number): Date {
   const d = new Date(date);
@@ -25,12 +24,12 @@ export default function CalorieTrendChart({ foodEntries, targetCalories }: { foo
     // would look up the wrong bucket and shift the whole chart by a day.
     const iso = toISODate(d);
     return {
-      label: format(d, range === 7 ? 'EEE' : 'MMM d'),
-      calories: Math.round(totalsByDate.get(iso) ?? 0),
+      label: d.toLocaleDateString(undefined, range === 7 ? { weekday: 'short' } : { month: 'short', day: 'numeric' }),
+      value: Math.round(totalsByDate.get(iso) ?? 0),
     };
   });
 
-  const hasData = chartData.some((d) => d.calories > 0);
+  const hasData = chartData.some((d) => d.value > 0);
 
   return (
     <div>
@@ -52,33 +51,13 @@ export default function CalorieTrendChart({ foodEntries, targetCalories }: { foo
           Log meals over a few days to see your calorie trend here.
         </div>
       ) : (
-        <div className="h-48">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-              <CartesianGrid stroke="var(--gridline)" vertical={false} />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
-                axisLine={{ stroke: 'var(--baseline)' }}
-                tickLine={false}
-                interval={range === 30 ? 4 : 0}
-              />
-              <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={44} />
-              <ReferenceLine y={targetCalories} stroke="var(--text-muted)" strokeDasharray="4 4" />
-              <Tooltip
-                contentStyle={{
-                  background: 'var(--chart-surface)',
-                  border: '1px solid var(--gridline)',
-                  borderRadius: 8,
-                  fontSize: 12,
-                  color: 'var(--text-primary)',
-                }}
-                formatter={(value) => [`${value} kcal`, 'Consumed']}
-              />
-              <Bar dataKey="calories" fill="var(--brand-primary)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        <SimpleBarChart
+          data={chartData}
+          referenceValue={targetCalories}
+          referenceLabel={`${targetCalories} target`}
+          color="var(--brand-primary)"
+          unit="kcal"
+        />
       )}
     </div>
   );
