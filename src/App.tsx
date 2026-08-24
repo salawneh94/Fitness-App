@@ -1,16 +1,18 @@
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
+import ErrorBoundary from './components/ErrorBoundary';
+import { lazyWithRetry } from './lib/lazyWithRetry';
 import { useAppStore } from './store/useAppStore';
 
-const SplashPage = lazy(() => import('./pages/SplashPage'));
-const LoginPage = lazy(() => import('./pages/LoginPage'));
-const OverviewPage = lazy(() => import('./pages/OverviewPage'));
-const NutritionPage = lazy(() => import('./pages/NutritionPage'));
-const WorkoutsPage = lazy(() => import('./pages/WorkoutsPage'));
-const PlansPage = lazy(() => import('./pages/PlansPage'));
-const ProgressPage = lazy(() => import('./pages/ProgressPage'));
-const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const SplashPage = lazyWithRetry(() => import('./pages/SplashPage'));
+const LoginPage = lazyWithRetry(() => import('./pages/LoginPage'));
+const OverviewPage = lazyWithRetry(() => import('./pages/OverviewPage'));
+const NutritionPage = lazyWithRetry(() => import('./pages/NutritionPage'));
+const WorkoutsPage = lazyWithRetry(() => import('./pages/WorkoutsPage'));
+const PlansPage = lazyWithRetry(() => import('./pages/PlansPage'));
+const ProgressPage = lazyWithRetry(() => import('./pages/ProgressPage'));
+const ProfilePage = lazyWithRetry(() => import('./pages/ProfilePage'));
 
 function RequireProfile({ children }: { children: React.ReactNode }) {
   const profile = useAppStore((s) => s.profile);
@@ -28,6 +30,7 @@ function PageFallback() {
 
 function App() {
   return (
+    <ErrorBoundary>
     <HashRouter>
       <Suspense fallback={<PageFallback />}>
         <Routes>
@@ -80,6 +83,7 @@ function App() {
         </Routes>
       </Suspense>
     </HashRouter>
+    </ErrorBoundary>
   );
 }
 
