@@ -14,6 +14,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      // Disabled for now: real-device debugging kept getting confused by stale/partially-evicted
+      // service worker caches from earlier deployments (this app shipped many times in a short
+      // window). selfDestroying ships a SW whose only job is to unregister itself and wipe all
+      // caches for anyone who still has an old one installed, cleanly migrating everyone off it.
+      selfDestroying: true,
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
