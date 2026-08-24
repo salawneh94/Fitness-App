@@ -25,12 +25,15 @@ export default function Layout() {
 
   return (
     // The mobile bottom nav (below) is deliberately rendered as a SIBLING of this div, not a
-    // child inside it — a position:fixed element nested inside an overflow-hidden/flex ancestor
-    // has a real history of WebKit-specific hit-testing bugs (renders in the right spot, but
-    // touches don't land on it), so it lives entirely outside that container to rule that out.
+    // child inside it — a position:fixed element nested inside a flex ancestor has a real
+    // history of WebKit-specific hit-testing bugs (renders in the right spot, but touches don't
+    // land on it), so it lives entirely outside that container to rule that out. The document
+    // scrolls normally here (min-h-screen, not a locked h-dvh/overflow-hidden shell) — a stricter
+    // fixed-height, non-scrolling document was tried and reverted because it risked breaking
+    // interaction on some devices more than it fixed, without confirmed benefit.
     <>
-    <div className="h-dvh flex flex-col md:flex-row overflow-hidden bg-gray-50 dark:bg-neutral-950 text-gray-900 dark:text-gray-100">
-      <aside className="hidden md:flex md:w-60 border-r border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 md:flex-col">
+    <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 dark:bg-neutral-950 text-gray-900 dark:text-gray-100">
+      <aside className="hidden md:flex md:w-60 md:min-h-screen border-r border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 md:flex-col">
         <div className="flex items-center gap-2 px-5 py-5 border-b border-gray-200 dark:border-neutral-800">
           <div className="w-8 h-8 rounded-xl bg-linear-to-br from-orange-500 to-lime-400 flex items-center justify-center text-white font-bold">F</div>
           <span className="font-semibold text-lg">FitTrack</span>
@@ -70,7 +73,7 @@ export default function Layout() {
         </nav>
       </aside>
 
-      <main className="flex-1 min-w-0 overflow-y-auto p-4 md:p-8 pb-28 md:pb-8 max-w-6xl mx-auto w-full">
+      <main className="flex-1 min-w-0 p-4 md:p-8 pb-28 md:pb-8 max-w-6xl mx-auto w-full">
         <Outlet />
       </main>
     </div>
