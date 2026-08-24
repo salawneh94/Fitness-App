@@ -173,7 +173,7 @@ function PhotosCard({
     e.target.value = '';
     if (!file) return;
     const blob = await resizeImageFile(file);
-    const id = onAdd({ date: new Date().toISOString().slice(0, 10) });
+    const id = onAdd({ date: todayISO() });
     await savePhotoBlob(id, blob);
     setUrls((prev) => ({ ...prev, [id]: URL.createObjectURL(blob) }));
   }

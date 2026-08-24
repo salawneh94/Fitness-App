@@ -69,8 +69,38 @@ export const ACTIVITY_LABELS: Record<ActivityLevel, string> = {
   very_active: 'Very Active (physical job / 2x day)',
 };
 
+/**
+ * Format a Date as a YYYY-MM-DD *calendar* date in the user's own timezone.
+ *
+ * Deliberately not `toISOString().slice(0, 10)`: that converts to UTC first, so anyone east of
+ * Greenwich gets the previous day's date for part of every evening, and anyone west of it gets
+ * tomorrow's for part of every morning — meals and workouts would land on the wrong day.
+ */
+export function toISODate(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return toISODate(new Date());
+}
+
+/**
+ * Add (or subtract) whole days to a YYYY-MM-DD calendar date.
+ *
+ * All arithmetic happens in UTC so the result depends only on the input string, never on the
+ * device's timezone. Doing this in local time is a trap: `new Date('2026-08-24T00:00:00')` is
+ * parsed as local midnight, and converting the result back with `toISOString()` reinterprets it
+ * as UTC — so at UTC+3, adding a day returns *the same date string*. Any loop advancing a cursor
+ * with it then never terminates and freezes the tab.
+ */
+export function addDaysISO(iso: string, delta: number): string {
+  const [year, month, day] = iso.split('-').map(Number);
+  const d = new Date(Date.UTC(year, month - 1, day));
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
 }
 
 // Epley formula — a widely used estimate of 1-rep max from a submaximal set.

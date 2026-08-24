@@ -1,11 +1,12 @@
 import type { FoodEntry, WorkoutLogEntry } from '../types';
-import { todayISO } from './calc';
+import { addDaysISO, todayISO } from './calc';
 
-function addDays(iso: string, delta: number): string {
-  const d = new Date(iso + 'T00:00:00');
-  d.setDate(d.getDate() + delta);
-  return d.toISOString().slice(0, 10);
-}
+const addDays = addDaysISO;
+
+// Nothing here should ever walk more than a few years of days. If a cursor somehow stops
+// advancing, stop rather than spinning the main thread — an infinite loop here freezes the
+// whole tab (no scrolling, no taps), which is far worse than a slightly wrong streak count.
+const MAX_DAYS_SCANNED = 20000;
 
 function activeDaySet(foodEntries: FoodEntry[], workoutLogs: WorkoutLogEntry[]): Set<string> {
   const days = new Set<string>();
@@ -34,7 +35,7 @@ export function computeStreaks(
   // start counting from yesterday if today has no activity yet).
   let currentStreak = 0;
   let cursor = active.has(today) ? today : addDays(today, -1);
-  while (active.has(cursor)) {
+  while (active.has(cursor) && currentStreak < MAX_DAYS_SCANNED) {
     currentStreak++;
     cursor = addDays(cursor, -1);
   }
@@ -43,7 +44,7 @@ export function computeStreaks(
   let bestStreak = 0;
   let running = 0;
   let d = since;
-  while (d <= today) {
+  for (let scanned = 0; d <= today && scanned < MAX_DAYS_SCANNED; scanned++) {
     if (active.has(d)) {
       running++;
       bestStreak = Math.max(bestStreak, running);
@@ -84,7 +85,7 @@ export function computeRestDayInsight(workoutLogs: WorkoutLogEntry[]): RestDayIn
   const today = todayISO();
   let consecutive = 0;
   let cursor = trainedDays.has(today) ? today : addDays(today, -1);
-  while (trainedDays.has(cursor)) {
+  while (trainedDays.has(cursor) && consecutive < MAX_DAYS_SCANNED) {
     consecutive++;
     cursor = addDays(cursor, -1);
   }

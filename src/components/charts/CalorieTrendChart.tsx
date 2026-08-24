@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
 import { format } from 'date-fns';
 import type { FoodEntry } from '../../types';
+import { toISODate } from '../../lib/calc';
 
 function addDays(date: Date, delta: number): Date {
   const d = new Date(date);
@@ -20,7 +21,9 @@ export default function CalorieTrendChart({ foodEntries, targetCalories }: { foo
   const today = new Date();
   const chartData = Array.from({ length: range }).map((_, i) => {
     const d = addDays(today, -(range - 1 - i));
-    const iso = d.toISOString().slice(0, 10);
+    // Local calendar date — entries are stored by the user's own day, so a UTC conversion here
+    // would look up the wrong bucket and shift the whole chart by a day.
+    const iso = toISODate(d);
     return {
       label: format(d, range === 7 ? 'EEE' : 'MMM d'),
       calories: Math.round(totalsByDate.get(iso) ?? 0),
