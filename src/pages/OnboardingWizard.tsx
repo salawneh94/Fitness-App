@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Minus, Plus, Check } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import type { ActivityLevel, Goal, Profile, Sex, UnitSystem } from '../types';
-import { ACTIVITY_LABELS, GOAL_LABELS, calcDailyTargets } from '../lib/calc';
+import { ACTIVITY_LABELS, GOAL_LABELS, planDailyTargets } from '../lib/calc';
+import TargetPlanNote from '../components/TargetPlanNote';
 import WeightInput from '../components/ui/WeightInput';
 import HeightInput from '../components/ui/HeightInput';
 import UnitToggle from '../components/ui/UnitToggle';
@@ -387,7 +388,8 @@ function StepTarget({
 }
 
 function StepReview({ form }: { form: WizardForm }) {
-  const targets = calcDailyTargets({ ...form, createdAt: new Date().toISOString() });
+  const profile: Profile = { ...form, createdAt: new Date().toISOString() };
+  const targets = planDailyTargets(profile);
   return (
     <div>
       <StepHeader title={`You're all set, ${form.name.split(' ')[0]}`} sub="Here's what we calculated for your daily targets." />
@@ -409,7 +411,8 @@ function StepReview({ form }: { form: WizardForm }) {
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>fat</p>
         </div>
       </div>
-      <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
+      <TargetPlanNote profile={profile} plan={targets} />
+      <p className="text-xs text-center mt-4" style={{ color: 'var(--text-muted)' }}>
         You can fine-tune anything later from your Profile page.
       </p>
     </div>

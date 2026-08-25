@@ -36,15 +36,111 @@ const GOAL_MACROS: Record<Goal, { proteinPerKg: number; fatPct: number }> = {
   general_health: { proteinPerKg: 1.4, fatPct: 0.3 },
 };
 
-export function calcDailyTargets(profile: Profile): DailyTargets {
+/** Energy in roughly a kilogram of body mass — the standard figure for planning a rate change. */
+const KCAL_PER_KG = 7700;
+
+/**
+ * Safety rails on how fast the plan will try to move, as a fraction of bodyweight per week.
+ * Losing faster than ~1%/wk costs lean mass; gaining faster than ~0.5%/wk is mostly fat.
+ */
+const MAX_LOSS_RATE_PER_WEEK = 0.01;
+const MAX_GAIN_RATE_PER_WEEK = 0.005;
+
+/** Never recommend eating below this, regardless of what the requested timeline implies. */
+function calorieFloor(profile: Profile): number {
+  const absolute = profile.sex === 'female' ? 1200 : 1500;
+  return Math.max(calcBMR(profile), absolute);
+}
+
+export interface TargetPlan extends DailyTargets {
+  tdee: number;
+  /** Weekly kg change the user's target + timeframe actually asks for (negative = loss). */
+  requestedWeeklyRateKg: number;
+  /** What the plan will actually aim for after safety limits. */
+  appliedWeeklyRateKg: number;
+  /** True when the requested pace was too aggressive and got limited. */
+  rateWasCapped: boolean;
+  /** True when the calories needed for that pace fell below the safe floor. */
+  hitCalorieFloor: boolean;
+  /** Realistic weeks to reach the target at the applied rate, when one applies. */
+  projectedWeeks: number | null;
+}
+
+/**
+ * Build the daily calorie and macro plan.
+ *
+ * The calorie number is driven by the user's actual target: how much weight they want to change
+ * and over how long. Previously targetWeightKg and timeframeWeeks were collected and displayed
+ * but never used, so editing either changed nothing — and three of the five goals shared the same
+ * adjustment, so switching between those changed nothing either.
+ *
+ * When there's no meaningful weight target (target equals current, or it's missing), it falls back
+ * to the goal's generic adjustment so the number is still sensible.
+ */
+export function planDailyTargets(profile: Profile): TargetPlan {
   const tdee = calcTDEE(profile);
-  const calories = Math.round(tdee * (1 + GOAL_ADJUSTMENT[profile.goal]));
+  const floor = calorieFloor(profile);
+
+  const target = profile.targetWeightKg;
+  const weeks = profile.timeframeWeeks;
+  const deltaKg = target != null && target > 0 ? target - profile.weightKg : 0;
+  const hasWeightTarget = Math.abs(deltaKg) >= 0.5 && weeks > 0;
+
+  let requestedWeeklyRateKg = 0;
+  let appliedWeeklyRateKg = 0;
+  let calories: number;
+  let rateWasCapped = false;
+
+  if (hasWeightTarget) {
+    requestedWeeklyRateKg = deltaKg / weeks;
+
+    const maxLoss = profile.weightKg * MAX_LOSS_RATE_PER_WEEK;
+    const maxGain = profile.weightKg * MAX_GAIN_RATE_PER_WEEK;
+    appliedWeeklyRateKg = Math.max(-maxLoss, Math.min(maxGain, requestedWeeklyRateKg));
+    rateWasCapped = Math.abs(appliedWeeklyRateKg - requestedWeeklyRateKg) > 0.005;
+
+    const dailyDelta = (appliedWeeklyRateKg * KCAL_PER_KG) / 7;
+    calories = tdee + dailyDelta;
+  } else {
+    calories = tdee * (1 + GOAL_ADJUSTMENT[profile.goal]);
+    appliedWeeklyRateKg = ((calories - tdee) * 7) / KCAL_PER_KG;
+    requestedWeeklyRateKg = appliedWeeklyRateKg;
+  }
+
+  const hitCalorieFloor = calories < floor;
+  if (hitCalorieFloor) {
+    calories = floor;
+    appliedWeeklyRateKg = ((calories - tdee) * 7) / KCAL_PER_KG;
+  }
+
+  calories = Math.round(calories);
+
+  const projectedWeeks =
+    hasWeightTarget && Math.abs(appliedWeeklyRateKg) > 0.001
+      ? Math.ceil(Math.abs(deltaKg / appliedWeeklyRateKg))
+      : null;
+
   const { proteinPerKg, fatPct } = GOAL_MACROS[profile.goal];
   const proteinG = Math.round(profile.weightKg * proteinPerKg);
   const fatG = Math.round((calories * fatPct) / 9);
-  const proteinCals = proteinG * 4;
-  const fatCals = fatG * 9;
-  const carbsG = Math.max(0, Math.round((calories - proteinCals - fatCals) / 4));
+  const carbsG = Math.max(0, Math.round((calories - proteinG * 4 - fatG * 9) / 4));
+
+  return {
+    calories,
+    proteinG,
+    carbsG,
+    fatG,
+    tdee: Math.round(tdee),
+    requestedWeeklyRateKg,
+    appliedWeeklyRateKg,
+    rateWasCapped,
+    hitCalorieFloor,
+    projectedWeeks,
+  };
+}
+
+export function calcDailyTargets(profile: Profile): DailyTargets {
+  const { calories, proteinG, carbsG, fatG } = planDailyTargets(profile);
   return { calories, proteinG, carbsG, fatG };
 }
 

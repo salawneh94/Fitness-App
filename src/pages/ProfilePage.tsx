@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Download, Upload, Loader2 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import type { ActivityLevel, Goal, Profile, Sex, UnitSystem } from '../types';
-import { ACTIVITY_LABELS, GOAL_LABELS, bmi, calcDailyTargets } from '../lib/calc';
+import { ACTIVITY_LABELS, GOAL_LABELS, bmi, planDailyTargets } from '../lib/calc';
 import { exportAllData, importAllData } from '../lib/exportImport';
 import Card from '../components/ui/Card';
+import TargetPlanNote from '../components/TargetPlanNote';
 import WeightInput from '../components/ui/WeightInput';
 import HeightInput from '../components/ui/HeightInput';
 import UnitToggle from '../components/ui/UnitToggle';
@@ -78,7 +79,7 @@ function EditProfileForm() {
     timeframeWeeks: Number(form.timeframeWeeks),
     createdAt: existing?.createdAt ?? new Date().toISOString(),
   };
-  const targets = form.heightCm && form.weightKg && form.age ? calcDailyTargets(preview) : null;
+  const targets = form.heightCm && form.weightKg && form.age ? planDailyTargets(preview) : null;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -239,6 +240,7 @@ function EditProfileForm() {
             <p className="text-xs mt-3 text-center" style={{ color: 'var(--text-muted)' }}>
               BMI: {bmi(preview).toFixed(1)} — targets recalculate automatically as your weight & activity change.
             </p>
+            <TargetPlanNote profile={preview} plan={targets} />
           </Card>
         )}
 
