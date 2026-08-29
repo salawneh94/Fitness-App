@@ -22,7 +22,7 @@ export default function SavedMealsSection() {
     <Card
       title="Saved Meals"
       action={
-        <button onClick={() => setBuilding(true)} className="flex items-center gap-1.5 text-sm font-medium text-orange-600 dark:text-orange-400">
+        <button onClick={() => setBuilding(true)} className="flex items-center gap-1.5 text-sm font-medium text-cyan-600 dark:text-cyan-400">
           <Plus size={15} /> New
         </button>
       }
@@ -32,7 +32,7 @@ export default function SavedMealsSection() {
           Save a frequently-eaten meal once, then re-log it in one tap instead of re-entering it every time.
         </p>
       ) : (
-        <ul className="divide-y divide-gray-100 dark:divide-neutral-800">
+        <ul className="divide-y divide-gray-100 dark:divide-slate-800">
           {savedMeals.map((meal) => {
             const totalCals = meal.items.reduce((s, i) => s + i.calories * i.quantity, 0);
             return (
@@ -50,7 +50,7 @@ export default function SavedMealsSection() {
                       key={c.key}
                       onClick={() => logSavedMeal(meal.id, c.key)}
                       title={`Log to ${c.key}`}
-                      className="w-7 h-7 rounded-full text-xs font-semibold border border-gray-300 dark:border-neutral-700 hover:bg-orange-50 dark:hover:bg-orange-950/40 hover:border-orange-400"
+                      className="w-7 h-7 rounded-full text-xs font-semibold border border-gray-300 dark:border-slate-700 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 hover:border-cyan-400"
                       style={{ color: 'var(--text-secondary)' }}
                     >
                       {c.label}

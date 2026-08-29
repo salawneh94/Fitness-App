@@ -11,7 +11,7 @@ export default function ExerciseVideoModal({
   return (
     <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="bg-white dark:bg-neutral-900 rounded-2xl p-4 w-full max-w-2xl"
+        className="bg-white dark:bg-slate-900 rounded-2xl p-4 w-full max-w-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-3">
@@ -21,7 +21,7 @@ export default function ExerciseVideoModal({
               {exercise.equipment} {exercise.sets && exercise.reps ? `· ${exercise.sets} × ${exercise.reps}` : exercise.notes ? `· ${exercise.notes}` : ''}
             </p>
           </div>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800 shrink-0" aria-label="Close">
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 shrink-0" aria-label="Close">
             <X size={18} />
           </button>
         </div>
@@ -37,7 +37,7 @@ export default function ExerciseVideoModal({
             />
           </div>
         ) : (
-          <div className="rounded-xl bg-gray-50 dark:bg-neutral-800 p-6 text-center">
+          <div className="rounded-xl bg-gray-50 dark:bg-slate-800 p-6 text-center">
             <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
               No verified in-app video yet for this exercise — search YouTube instead.
             </p>
@@ -48,7 +48,7 @@ export default function ExerciseVideoModal({
           href={exercise.videoUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 text-sm text-orange-600 dark:text-orange-400 mt-3"
+          className="flex items-center justify-center gap-1.5 text-sm text-cyan-600 dark:text-cyan-400 mt-3"
         >
           <ExternalLink size={14} /> {exercise.videoId ? 'More videos on YouTube' : 'Search YouTube'}
         </a>

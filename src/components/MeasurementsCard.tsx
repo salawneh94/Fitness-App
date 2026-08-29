@@ -54,13 +54,13 @@ export default function MeasurementsCard({ unit }: { unit: UnitSystem }) {
       </div>
       <button
         onClick={save}
-        className="px-4 py-2 rounded-full bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold mb-4"
+        className="px-4 py-2 rounded-full bg-cyan-600 hover:bg-cyan-700 active:scale-95 transition-transform text-white text-sm font-semibold mb-4"
       >
         Save
       </button>
 
       <select
-        className="mb-3 rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
+        className="mb-3 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
         value={selected}
         onChange={(e) => setSelected(e.target.value as MeasurementKey)}
       >

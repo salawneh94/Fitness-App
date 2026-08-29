@@ -2,7 +2,7 @@ import type { UnitSystem } from '../../types';
 import { cmToFeetInches, feetInchesToCm } from '../../lib/units';
 
 const inputCls =
-  'w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500';
+  'w-full rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500';
 
 export default function HeightInput({
   valueCm,

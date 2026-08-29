@@ -62,9 +62,9 @@ export default function WorkoutsPage() {
             <button
               key={day}
               onClick={() => setActiveDay(day)}
-              className={`rounded-2xl border p-3 text-left transition-colors ${
-                isToday ? 'border-orange-400 bg-orange-50/60 dark:bg-orange-950/30' : 'border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900'
-              } hover:border-orange-400`}
+              className={`rounded-2xl border p-3 text-left transition-all active:scale-[0.97] hover:-translate-y-0.5 ${
+                isToday ? 'border-cyan-400 bg-cyan-50/60 dark:bg-cyan-950/30' : 'border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900'
+              } hover:border-cyan-400`}
             >
               <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{day}</p>
               <p className="text-sm font-medium mt-1 line-clamp-2 min-h-[2.5rem]" style={{ color: w ? 'var(--text-primary)' : 'var(--text-muted)' }}>
@@ -135,7 +135,7 @@ export default function WorkoutsPage() {
         {workoutLogs.length === 0 ? (
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No workouts logged yet. Complete a session and log it to build your history.</p>
         ) : (
-          <ul className="divide-y divide-gray-100 dark:divide-neutral-800">
+          <ul className="divide-y divide-gray-100 dark:divide-slate-800">
             {[...workoutLogs].reverse().slice(0, 10).map((log) => (
               <li key={log.id} className="flex items-center justify-between py-2.5 text-sm">
                 <div>
@@ -179,10 +179,10 @@ function DayDetailModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>{day} — {workout?.name ?? 'Rest Day'}</h3>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800" aria-label="Close">
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800" aria-label="Close">
             <X size={18} />
           </button>
         </div>
@@ -191,7 +191,7 @@ function DayDetailModal({
           <>
             <ul className="space-y-2 mb-4">
               {workout.exercises.map((ex) => (
-                <li key={ex.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-gray-50 dark:bg-neutral-800">
+                <li key={ex.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800">
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{ex.name}</p>
                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -200,7 +200,7 @@ function DayDetailModal({
                   </div>
                   <button
                     onClick={() => setVideoExercise(ex)}
-                    className="flex items-center gap-1 text-xs font-medium text-orange-600 dark:text-orange-400 shrink-0"
+                    className="flex items-center gap-1 text-xs font-medium text-cyan-600 dark:text-cyan-400 shrink-0"
                   >
                     <PlayCircle size={16} /> Demo
                   </button>
@@ -209,15 +209,15 @@ function DayDetailModal({
             </ul>
             {videoExercise && <ExerciseVideoModal exercise={videoExercise} onClose={() => setVideoExercise(null)} />}
             <div className="flex gap-2">
-              <button onClick={onEdit} className="py-2.5 px-4 rounded-lg border border-gray-300 dark:border-neutral-700 text-sm font-medium">
+              <button onClick={onEdit} className="py-2.5 px-4 rounded-lg border border-gray-300 dark:border-slate-700 text-sm font-medium">
                 Edit
               </button>
-              <button onClick={() => onLog(workout)} className="flex-1 py-2.5 rounded-full border border-orange-600 text-orange-600 dark:text-orange-400 text-sm font-semibold">
+              <button onClick={() => onLog(workout)} className="flex-1 py-2.5 rounded-full border border-cyan-600 text-cyan-600 dark:text-cyan-400 text-sm font-semibold">
                 Log as done
               </button>
               <button
                 onClick={() => onPlay(workout)}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-full bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-full bg-cyan-600 hover:bg-cyan-700 active:scale-95 transition-transform text-white text-sm font-semibold"
               >
                 <Zap size={15} /> Start Workout
               </button>
@@ -226,7 +226,7 @@ function DayDetailModal({
         ) : (
           <div className="text-center py-6">
             <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>No workout scheduled for this day.</p>
-            <button onClick={onEdit} className="inline-flex items-center gap-1.5 py-2.5 px-4 rounded-full bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold">
+            <button onClick={onEdit} className="inline-flex items-center gap-1.5 py-2.5 px-4 rounded-full bg-cyan-600 hover:bg-cyan-700 active:scale-95 transition-transform text-white text-sm font-semibold">
               <Plus size={16} /> Add a workout
             </button>
           </div>
@@ -258,10 +258,10 @@ function EditDayModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Edit {day}</h3>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800" aria-label="Close">
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800" aria-label="Close">
             <X size={18} />
           </button>
         </div>
@@ -269,7 +269,7 @@ function EditDayModal({
         <label className="block mb-4">
           <span className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Workout name</span>
           <input
-            className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Push Day"
@@ -288,8 +288,8 @@ function EditDayModal({
                     onClick={() => toggle(ex.id)}
                     className={`text-xs px-2.5 py-1.5 rounded-full border transition-colors ${
                       selected.includes(ex.id)
-                        ? 'bg-orange-600 text-white border-orange-600'
-                        : 'border-gray-300 dark:border-neutral-700 text-gray-600 dark:text-gray-300'
+                        ? 'bg-cyan-600 text-white border-cyan-600'
+                        : 'border-gray-300 dark:border-slate-700 text-gray-600 dark:text-gray-300'
                     }`}
                   >
                     {ex.name}
@@ -301,12 +301,12 @@ function EditDayModal({
         </div>
 
         <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-gray-300 dark:border-neutral-700 text-sm font-medium">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-gray-300 dark:border-slate-700 text-sm font-medium">
             Cancel
           </button>
           <button
             onClick={() => onSave(name, selected)}
-            className="flex-1 py-2.5 rounded-full bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold"
+            className="flex-1 py-2.5 rounded-full bg-cyan-600 hover:bg-cyan-700 active:scale-95 transition-transform text-white text-sm font-semibold"
           >
             Save
           </button>
@@ -373,10 +373,10 @@ function LogWorkoutModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Log: {workout.name}</h3>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800" aria-label="Close">
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800" aria-label="Close">
             <X size={18} />
           </button>
         </div>
@@ -387,7 +387,7 @@ function LogWorkoutModal({
             <input
               type="number"
               min={1}
-              className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
               value={durationMin}
               onChange={(e) => setDurationMin(Number(e.target.value))}
             />
@@ -397,7 +397,7 @@ function LogWorkoutModal({
             <input
               type="number"
               min={0}
-              className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
               value={caloriesBurned}
               onChange={(e) => setCaloriesBurned(e.target.value === '' ? '' : Number(e.target.value))}
             />
@@ -411,13 +411,13 @@ function LogWorkoutModal({
           {workout.exercises.map((ex) => {
             const sets = setsByExercise[ex.id] ?? [];
             return (
-              <div key={ex.id} className="rounded-xl border border-gray-200 dark:border-neutral-800 p-3">
+              <div key={ex.id} className="rounded-xl border border-gray-200 dark:border-slate-800 p-3">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{ex.name}</p>
                   <button
                     type="button"
                     onClick={() => addSet(ex)}
-                    className="flex items-center gap-1 text-xs font-medium text-orange-600 dark:text-orange-400"
+                    className="flex items-center gap-1 text-xs font-medium text-cyan-600 dark:text-cyan-400"
                   >
                     <Plus size={13} /> Add set
                   </button>
@@ -432,7 +432,7 @@ function LogWorkoutModal({
                           min={0}
                           step={0.5}
                           placeholder={weightUnitLabel(unit)}
-                          className="w-20 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-2 py-1 text-sm"
+                          className="w-20 rounded-md border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-sm"
                           value={s.weightKg ? Math.round(displayWeight(s.weightKg, unit) * 10) / 10 : ''}
                           onChange={(e) => updateSet(ex.id, idx, 'weightKg', toKgFromDisplay(Number(e.target.value), unit))}
                         />
@@ -441,7 +441,7 @@ function LogWorkoutModal({
                           type="number"
                           min={0}
                           placeholder="reps"
-                          className="w-16 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-2 py-1 text-sm"
+                          className="w-16 rounded-md border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-sm"
                           value={s.reps || ''}
                           onChange={(e) => updateSet(ex.id, idx, 'reps', Number(e.target.value))}
                         />
@@ -467,17 +467,17 @@ function LogWorkoutModal({
           <span className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Notes (optional)</span>
           <textarea
             rows={2}
-            className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
         </label>
 
         <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-gray-300 dark:border-neutral-700 text-sm font-medium">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-gray-300 dark:border-slate-700 text-sm font-medium">
             Cancel
           </button>
-          <button onClick={save} className="flex-1 py-2.5 rounded-full bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold">
+          <button onClick={save} className="flex-1 py-2.5 rounded-full bg-cyan-600 hover:bg-cyan-700 active:scale-95 transition-transform text-white text-sm font-semibold">
             Save
           </button>
         </div>

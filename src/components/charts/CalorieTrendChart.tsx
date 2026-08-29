@@ -39,7 +39,7 @@ export default function CalorieTrendChart({ foodEntries, targetCalories }: { foo
             key={r}
             onClick={() => setRange(r)}
             className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-              range === r ? 'bg-orange-600 text-white' : 'text-gray-500 dark:text-gray-400'
+              range === r ? 'bg-cyan-600 text-white' : 'text-gray-500 dark:text-gray-400'
             }`}
           >
             {r}d

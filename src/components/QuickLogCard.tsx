@@ -6,7 +6,7 @@ import Card from './ui/Card';
 import WeightInput from './ui/WeightInput';
 
 const inputCls =
-  'w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500';
+  'w-full rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500';
 
 export default function QuickLogCard() {
   const profile = useAppStore((s) => s.profile);
@@ -67,7 +67,7 @@ export default function QuickLogCard() {
       </div>
       <button
         onClick={save}
-        className="flex items-center justify-center gap-1.5 w-full sm:w-auto px-4 py-2 rounded-full bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold"
+        className="flex items-center justify-center gap-1.5 w-full sm:w-auto px-4 py-2 rounded-full bg-cyan-600 hover:bg-cyan-700 active:scale-95 transition-transform text-white text-sm font-semibold"
       >
         {saved ? <Check size={15} /> : null}
         {saved ? 'Saved' : 'Save'}

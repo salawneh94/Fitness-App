@@ -55,7 +55,7 @@ export default function PhotoCompareSlider({ photos }: { photos: PhotoMeta[] }) 
         <label className="flex-1 block">
           <span className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Before</span>
           <select
-            className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
             value={beforeId}
             onChange={(e) => setBeforeId(e.target.value)}
           >
@@ -69,7 +69,7 @@ export default function PhotoCompareSlider({ photos }: { photos: PhotoMeta[] }) 
         <label className="flex-1 block">
           <span className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>After</span>
           <select
-            className="w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
             value={afterId}
             onChange={(e) => setAfterId(e.target.value)}
           >
@@ -83,7 +83,7 @@ export default function PhotoCompareSlider({ photos }: { photos: PhotoMeta[] }) 
       </div>
 
       {urls[beforeId] && urls[afterId] ? (
-        <div className="relative aspect-[3/4] max-w-sm mx-auto rounded-2xl overflow-hidden select-none bg-gray-100 dark:bg-neutral-800">
+        <div className="relative aspect-[3/4] max-w-sm mx-auto rounded-2xl overflow-hidden select-none bg-gray-100 dark:bg-slate-800">
           <img src={urls[beforeId]} alt="Before" className="absolute inset-0 w-full h-full object-cover" draggable={false} />
           <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 0 0 ${sliderPct}%)` }}>
             <img src={urls[afterId]} alt="After" className="absolute inset-0 w-full h-full object-cover" draggable={false} />

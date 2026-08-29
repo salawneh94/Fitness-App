@@ -46,8 +46,8 @@ export default function PlansPage() {
       </div>
 
       {recommendation && (
-        <div className="flex items-start gap-3 p-4 rounded-2xl border border-orange-300 dark:border-orange-800 bg-orange-50/60 dark:bg-orange-950/30">
-          <Sparkles size={18} className="text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 p-4 rounded-2xl border border-cyan-300 dark:border-cyan-800 bg-cyan-50/60 dark:bg-cyan-950/30">
+          <Sparkles size={18} className="text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
               Recommended for you: {recommendation.template.name}
@@ -63,20 +63,20 @@ export default function PlansPage() {
           const isApplied = appliedId === t.id;
           const isRecommended = recommendation?.template.id === t.id;
           return (
-            <Card key={t.id} className={`!p-0 overflow-hidden ${isRecommended ? 'ring-2 ring-orange-400' : ''}`}>
+            <Card key={t.id} className={`!p-0 overflow-hidden ${isRecommended ? 'ring-2 ring-cyan-400' : ''}`}>
               <button
                 onClick={() => setExpandedId(isOpen ? null : t.id)}
                 className="w-full flex items-center justify-between gap-4 p-5 text-left"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
                     <Dumbbell size={18} />
                   </div>
                   <div className="min-w-0">
                     <p className="font-semibold flex items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
                       {t.name}
                       {isRecommended && (
-                        <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-orange-600 text-white">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-cyan-600 text-white">
                           Recommended
                         </span>
                       )}
@@ -85,18 +85,18 @@ export default function PlansPage() {
                   </div>
                 </div>
                 {isApplied && (
-                  <span className="flex items-center gap-1 text-xs font-medium text-orange-600 dark:text-orange-400 shrink-0">
+                  <span className="flex items-center gap-1 text-xs font-medium text-cyan-600 dark:text-cyan-400 shrink-0">
                     <CheckCircle2 size={14} /> Applied
                   </span>
                 )}
               </button>
 
               {isOpen && (
-                <div className="px-5 pb-5 border-t border-gray-100 dark:border-neutral-800 pt-4">
+                <div className="px-5 pb-5 border-t border-gray-100 dark:border-slate-800 pt-4">
                   <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>{t.description}</p>
                   <div className="grid sm:grid-cols-2 gap-3 mb-4">
                     {t.days.map((d) => (
-                      <div key={d.label} className="rounded-xl bg-gray-50 dark:bg-neutral-800 p-3">
+                      <div key={d.label} className="rounded-xl bg-gray-50 dark:bg-slate-800 p-3">
                         <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>
                           {d.label} · {d.focus}
                         </p>
@@ -106,7 +106,7 @@ export default function PlansPage() {
                               <span style={{ color: 'var(--text-primary)' }}>{ex.name}</span>
                               <button
                                 onClick={() => setVideoExercise(ex)}
-                                className="text-orange-600 dark:text-orange-400 shrink-0"
+                                className="text-cyan-600 dark:text-cyan-400 shrink-0"
                                 aria-label={`Watch demo for ${ex.name}`}
                               >
                                 <PlayCircle size={15} />
@@ -119,14 +119,14 @@ export default function PlansPage() {
                   </div>
                   <button
                     onClick={() => applyPlan(t.id)}
-                    className="text-sm font-semibold px-4 py-2 rounded-full bg-orange-600 hover:bg-orange-700 text-white"
+                    className="text-sm font-semibold px-4 py-2 rounded-full bg-cyan-600 hover:bg-cyan-700 active:scale-95 transition-transform text-white"
                   >
                     Apply to weekly schedule
                   </button>
                   {isApplied && (
                     <button
                       onClick={() => navigate('/workouts')}
-                      className="text-sm font-semibold px-4 py-2 rounded-lg border border-gray-300 dark:border-neutral-700 ml-2"
+                      className="text-sm font-semibold px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-700 ml-2"
                     >
                       View schedule
                     </button>

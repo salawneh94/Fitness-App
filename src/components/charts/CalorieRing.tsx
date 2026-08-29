@@ -1,4 +1,5 @@
 import RingGauge from './RingGauge';
+import CountUp from '../ui/CountUp';
 
 export default function CalorieRing({
   consumed,
@@ -17,7 +18,7 @@ export default function CalorieRing({
       <RingGauge
         value={consumed}
         target={target}
-        centerValue={`${Math.round(remaining)}`}
+        centerValue={<CountUp value={Math.round(remaining)} />}
         centerLabel={over ? 'over target' : 'kcal left'}
       />
       <dl className="text-sm space-y-1.5">

@@ -4,7 +4,7 @@ import { useAppStore } from '../store/useAppStore';
 import type { SavedMealItem } from '../types';
 
 const inputCls =
-  'w-full rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500';
+  'w-full rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500';
 
 const emptyItem = { name: '', calories: 0, proteinG: 0, carbsG: 0, fatG: 0, quantity: 1, servingLabel: 'serving' };
 
@@ -34,10 +34,10 @@ export default function SavedMealBuilderModal({ onClose }: { onClose: () => void
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>New Saved Meal</h3>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800" aria-label="Close">
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800" aria-label="Close">
             <X size={18} />
           </button>
         </div>
@@ -48,7 +48,7 @@ export default function SavedMealBuilderModal({ onClose }: { onClose: () => void
         </label>
 
         {items.length > 0 && (
-          <ul className="mb-4 divide-y divide-gray-100 dark:divide-neutral-800">
+          <ul className="mb-4 divide-y divide-gray-100 dark:divide-slate-800">
             {items.map((item, idx) => (
               <li key={idx} className="flex items-center justify-between py-2 text-sm">
                 <div>
@@ -69,7 +69,7 @@ export default function SavedMealBuilderModal({ onClose }: { onClose: () => void
           </ul>
         )}
 
-        <div className="rounded-xl border border-gray-200 dark:border-neutral-800 p-3 mb-4">
+        <div className="rounded-xl border border-gray-200 dark:border-slate-800 p-3 mb-4">
           <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Add item</p>
           <div className="space-y-2">
             <input
@@ -91,7 +91,7 @@ export default function SavedMealBuilderModal({ onClose }: { onClose: () => void
             <button
               type="button"
               onClick={addItem}
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-gray-300 dark:border-neutral-700 text-sm font-medium text-orange-600 dark:text-orange-400"
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-gray-300 dark:border-slate-700 text-sm font-medium text-cyan-600 dark:text-cyan-400"
             >
               <Plus size={15} /> Add item to meal
             </button>
@@ -99,13 +99,13 @@ export default function SavedMealBuilderModal({ onClose }: { onClose: () => void
         </div>
 
         <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-gray-300 dark:border-neutral-700 text-sm font-medium">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-gray-300 dark:border-slate-700 text-sm font-medium">
             Cancel
           </button>
           <button
             onClick={save}
             disabled={!mealName.trim() || items.length === 0}
-            className="flex-1 py-2.5 rounded-full bg-orange-600 hover:bg-orange-700 disabled:opacity-40 text-white text-sm font-semibold"
+            className="flex-1 py-2.5 rounded-full bg-cyan-600 hover:bg-cyan-700 disabled:opacity-40 active:not-disabled:scale-95 transition-transform text-white text-sm font-semibold"
           >
             Save Meal
           </button>

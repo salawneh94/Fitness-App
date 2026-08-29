@@ -13,7 +13,7 @@ const GOALS: Goal[] = ['lose_fat', 'build_muscle', 'maintain', 'improve_enduranc
 const ACTIVITIES: ActivityLevel[] = ['sedentary', 'light', 'moderate', 'active', 'very_active'];
 
 const inputCls =
-  'w-full rounded-xl border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500';
+  'w-full rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500';
 
 interface WizardForm {
   name: string;
@@ -77,7 +77,7 @@ export default function OnboardingWizard() {
       <div className="flex items-center justify-between mb-8">
         <button
           onClick={() => setStep((s) => Math.max(0, s - 1))}
-          className={`p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800 ${step === 0 ? 'invisible' : ''}`}
+          className={`p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 ${step === 0 ? 'invisible' : ''}`}
           aria-label="Back"
         >
           <ArrowLeft size={20} style={{ color: 'var(--text-primary)' }} />
@@ -137,7 +137,7 @@ export default function OnboardingWizard() {
       <button
         onClick={() => (step === STEP_COUNT - 1 ? finish() : setStep((s) => s + 1))}
         disabled={!canProceed}
-        className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-40 text-white font-semibold py-3.5 rounded-full transition-colors mt-8"
+        className="w-full bg-cyan-600 hover:bg-cyan-700 disabled:opacity-40 active:not-disabled:scale-[0.98] text-white font-semibold py-3.5 rounded-full transition-all mt-8"
       >
         {step === STEP_COUNT - 1 ? 'Start Tracking' : 'Continue'}
       </button>
@@ -185,8 +185,8 @@ function StepSex({ value, onChange }: { value: Sex; onChange: (v: Sex) => void }
             onClick={() => onChange(o.key)}
             className={`w-full text-left px-5 py-4 rounded-2xl border-2 font-medium transition-colors ${
               value === o.key
-                ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/30'
-                : 'border-gray-200 dark:border-neutral-800'
+                ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-950/30'
+                : 'border-gray-200 dark:border-slate-800'
             }`}
             style={{ color: 'var(--text-primary)' }}
           >
@@ -205,7 +205,7 @@ function StepAge({ value, onChange }: { value: number; onChange: (v: number) => 
       <div className="flex items-center justify-center gap-6">
         <button
           onClick={() => onChange(Math.max(13, value - 1))}
-          className="w-11 h-11 rounded-full border border-gray-300 dark:border-neutral-700 flex items-center justify-center"
+          className="w-11 h-11 rounded-full border border-gray-300 dark:border-slate-700 flex items-center justify-center"
           aria-label="Decrease age"
         >
           <Minus size={18} style={{ color: 'var(--text-primary)' }} />
@@ -215,7 +215,7 @@ function StepAge({ value, onChange }: { value: number; onChange: (v: number) => 
         </span>
         <button
           onClick={() => onChange(Math.min(100, value + 1))}
-          className="w-11 h-11 rounded-full border border-gray-300 dark:border-neutral-700 flex items-center justify-center"
+          className="w-11 h-11 rounded-full border border-gray-300 dark:border-slate-700 flex items-center justify-center"
           aria-label="Increase age"
         >
           <Plus size={18} style={{ color: 'var(--text-primary)' }} />
@@ -270,13 +270,13 @@ function StepGoal({ value, onChange }: { value: Goal; onChange: (g: Goal) => voi
             key={g}
             onClick={() => onChange(g)}
             className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl border-2 font-medium transition-colors ${
-              value === g ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/30' : 'border-gray-200 dark:border-neutral-800'
+              value === g ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-950/30' : 'border-gray-200 dark:border-slate-800'
             }`}
             style={{ color: 'var(--text-primary)' }}
           >
             {GOAL_LABELS[g]}
             {value === g && (
-              <span className="w-5 h-5 rounded-full bg-orange-600 flex items-center justify-center shrink-0">
+              <span className="w-5 h-5 rounded-full bg-cyan-600 flex items-center justify-center shrink-0">
                 <Check size={13} className="text-white" />
               </span>
             )}
@@ -307,7 +307,7 @@ function StepActivity({
             key={a}
             onClick={() => onActivity(a)}
             className={`w-full text-left px-4 py-3 rounded-xl border-2 text-sm font-medium transition-colors ${
-              activityLevel === a ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/30' : 'border-gray-200 dark:border-neutral-800'
+              activityLevel === a ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-950/30' : 'border-gray-200 dark:border-slate-800'
             }`}
             style={{ color: 'var(--text-primary)' }}
           >
@@ -394,19 +394,19 @@ function StepReview({ form }: { form: WizardForm }) {
     <div>
       <StepHeader title={`You're all set, ${form.name.split(' ')[0]}`} sub="Here's what we calculated for your daily targets." />
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center mb-4">
-        <div className="rounded-2xl border border-gray-200 dark:border-neutral-800 py-4">
+        <div className="rounded-2xl border border-gray-200 dark:border-slate-800 py-4">
           <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{targets.calories}</p>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>kcal / day</p>
         </div>
-        <div className="rounded-2xl border border-gray-200 dark:border-neutral-800 py-4">
+        <div className="rounded-2xl border border-gray-200 dark:border-slate-800 py-4">
           <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{targets.proteinG}g</p>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>protein</p>
         </div>
-        <div className="rounded-2xl border border-gray-200 dark:border-neutral-800 py-4">
+        <div className="rounded-2xl border border-gray-200 dark:border-slate-800 py-4">
           <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{targets.carbsG}g</p>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>carbs</p>
         </div>
-        <div className="rounded-2xl border border-gray-200 dark:border-neutral-800 py-4">
+        <div className="rounded-2xl border border-gray-200 dark:border-slate-800 py-4">
           <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{targets.fatG}g</p>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>fat</p>
         </div>

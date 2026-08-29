@@ -17,7 +17,7 @@ export default function SplashPage() {
       <div />
 
       <div className="relative flex flex-col items-center text-center">
-        <div className="w-20 h-20 rounded-3xl bg-linear-to-br from-orange-500 to-lime-400 flex items-center justify-center text-white font-bold text-3xl mb-6 shadow-lg shadow-orange-600/30">
+        <div className="w-20 h-20 rounded-3xl bg-linear-to-br from-cyan-500 to-amber-400 flex items-center justify-center text-white font-bold text-3xl mb-6 shadow-lg shadow-cyan-600/30">
           F
         </div>
         <h1 className="text-3xl font-bold mb-2">FitTrack</h1>
@@ -26,7 +26,7 @@ export default function SplashPage() {
 
       <button
         onClick={() => navigate('/login')}
-        className="relative w-full max-w-xs bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-3.5 rounded-full transition-colors"
+        className="relative w-full max-w-xs bg-linear-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 active:scale-95 text-white font-semibold py-3.5 rounded-full transition-all"
       >
         Get Started
       </button>

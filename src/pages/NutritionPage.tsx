@@ -93,7 +93,7 @@ export default function NutritionPage() {
               {entries.length === 0 ? (
                 <p className="text-sm mb-3" style={{ color: 'var(--text-muted)' }}>Nothing logged yet.</p>
               ) : (
-                <ul className="divide-y divide-gray-100 dark:divide-neutral-800 mb-3">
+                <ul className="divide-y divide-gray-100 dark:divide-slate-800 mb-3">
                   {entries.map((e) => (
                     <li key={e.id} className="flex items-center justify-between py-2 text-sm">
                       <div className="min-w-0">
@@ -118,7 +118,7 @@ export default function NutritionPage() {
               )}
               <button
                 onClick={() => setAddingMeal(key)}
-                className="flex items-center gap-1.5 text-sm font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700"
+                className="flex items-center gap-1.5 text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700"
               >
                 <Plus size={16} /> Add food
               </button>

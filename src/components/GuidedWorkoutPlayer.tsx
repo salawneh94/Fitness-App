@@ -3,6 +3,7 @@ import { X, Play, Pause, SkipForward, ChevronLeft, ChevronRight, PlayCircle, Plu
 import type { ExerciseLogEntry, ScheduledWorkout, UnitSystem } from '../types';
 import { displayWeight, toKgFromDisplay, weightUnitLabel } from '../lib/units';
 import ExerciseVideoModal from './ExerciseVideoModal';
+import Confetti from './Confetti';
 
 const REST_PRESETS = [30, 60, 90, 120, 180];
 
@@ -122,7 +123,7 @@ export default function GuidedWorkoutPlayer({
       <div className="px-4 mb-2">
         <div className="h-1 rounded-full bg-white/10 overflow-hidden">
           <div
-            className="h-full bg-orange-500 transition-all"
+            className="h-full bg-cyan-500 transition-all"
             style={{ width: `${((exerciseIndex + 1) / workout.exercises.length) * 100}%` }}
           />
         </div>
@@ -150,14 +151,14 @@ export default function GuidedWorkoutPlayer({
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setRunning((r) => !r)}
-                className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center"
+                className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center active:scale-90 transition-transform"
                 aria-label={running ? 'Pause' : 'Resume'}
               >
                 {running ? <Pause size={22} /> : <Play size={22} />}
               </button>
               <button
                 onClick={() => setResting(false)}
-                className="w-14 h-14 rounded-full bg-orange-600 flex items-center justify-center"
+                className="w-14 h-14 rounded-full bg-cyan-600 flex items-center justify-center active:scale-90 transition-transform"
                 aria-label="Skip rest"
               >
                 <SkipForward size={22} />
@@ -173,7 +174,7 @@ export default function GuidedWorkoutPlayer({
             </p>
             <button
               onClick={() => setShowVideo(true)}
-              className="flex items-center gap-1.5 text-sm text-orange-400 mb-8"
+              className="flex items-center gap-1.5 text-sm text-cyan-400 mb-8"
             >
               <PlayCircle size={16} /> Watch demo
             </button>
@@ -183,7 +184,7 @@ export default function GuidedWorkoutPlayer({
               <div className="flex flex-wrap justify-center gap-2 mb-6">
                 {setsForExercise.map((s, i) => (
                   <span key={i} className="flex items-center gap-1 text-xs bg-white/10 rounded-full px-3 py-1.5">
-                    <Check size={12} className="text-orange-400" />
+                    <Check size={12} className="text-cyan-400" />
                     {Math.round(displayWeight(s.weightKg, unit) * 10) / 10} {weightUnitLabel(unit)} × {s.reps}
                   </span>
                 ))}
@@ -211,7 +212,7 @@ export default function GuidedWorkoutPlayer({
               />
               <button
                 onClick={logSet}
-                className="w-11 h-11 rounded-full bg-orange-600 flex items-center justify-center shrink-0"
+                className="w-11 h-11 rounded-full bg-cyan-600 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
                 aria-label="Log set"
               >
                 <Plus size={20} />
@@ -234,7 +235,7 @@ export default function GuidedWorkoutPlayer({
         </button>
         <button
           onClick={goNext}
-          className="flex-1 flex items-center justify-center gap-1 px-4 py-3 rounded-full bg-orange-600 hover:bg-orange-700 text-sm font-semibold"
+          className="flex-1 flex items-center justify-center gap-1 px-4 py-3 rounded-full bg-cyan-600 hover:bg-cyan-700 active:scale-95 transition-transform text-sm font-semibold"
         >
           {isLast ? 'Finish Workout' : 'Next Exercise'} <ChevronRight size={16} />
         </button>
@@ -262,8 +263,11 @@ function FinishScreen({
 
   return (
     <div className="fixed inset-0 z-50 bg-black text-white flex flex-col items-center justify-center px-6">
+      <Confetti />
       <p className="text-sm uppercase tracking-wide text-white/50 mb-2">Workout complete</p>
-      <h1 className="text-3xl font-bold mb-6 text-center">Nice work on {workout.name}!</h1>
+      <h1 className="text-3xl font-bold mb-6 text-center" style={{ animation: 'celebrate-pop 0.5s ease' }}>
+        Nice work on {workout.name}!
+      </h1>
       <div className="flex gap-6 mb-8">
         <div className="text-center">
           <p className="text-2xl font-bold">{durationMin}</p>
@@ -297,7 +301,7 @@ function FinishScreen({
         </button>
         <button
           onClick={() => onSave(caloriesBurned === '' ? undefined : caloriesBurned, notes || undefined)}
-          className="flex-1 py-3 rounded-full bg-orange-600 hover:bg-orange-700 text-sm font-semibold"
+          className="flex-1 py-3 rounded-full bg-cyan-600 hover:bg-cyan-700 active:scale-95 transition-transform text-sm font-semibold"
         >
           Save
         </button>

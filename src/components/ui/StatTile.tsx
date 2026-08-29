@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 export default function StatTile({
   icon: Icon,
@@ -9,14 +10,14 @@ export default function StatTile({
 }: {
   icon: LucideIcon;
   label: string;
-  value: string;
+  value: ReactNode;
   sub?: string;
   accent?: string;
 }) {
   return (
-    <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-3xl p-5 flex items-start gap-4 shadow-sm shadow-gray-200/50 dark:shadow-none">
+    <div className="group bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-3xl p-5 flex items-start gap-4 shadow-sm shadow-gray-200/50 dark:shadow-none transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-cyan-500/10 hover:border-cyan-800/60">
       <div
-        className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+        className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110"
         style={{ background: `color-mix(in srgb, ${accent} 18%, transparent)`, color: accent }}
       >
         <Icon size={20} />

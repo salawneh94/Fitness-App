@@ -48,10 +48,10 @@ export default function BarcodeScannerModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl p-5 w-full max-w-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 w-full max-w-sm">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Scan Barcode</h3>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-800" aria-label="Close">
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800" aria-label="Close">
             <X size={18} />
           </button>
         </div>

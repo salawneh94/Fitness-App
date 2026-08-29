@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 
 const inputCls =
-  'w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-orange-500';
+  'w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-500';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -25,7 +25,7 @@ export default function LoginPage() {
           <input className={inputCls} placeholder="Email (optional)" type="email" autoComplete="email" />
           <button
             type="submit"
-            className="w-full bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-3 rounded-full transition-colors mt-2"
+            className="w-full bg-linear-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 active:scale-95 text-white font-semibold py-3 rounded-full transition-all mt-2"
           >
             Continue
           </button>

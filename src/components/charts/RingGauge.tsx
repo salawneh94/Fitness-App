@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 export default function RingGauge({
   value,
   target,
@@ -15,7 +17,7 @@ export default function RingGauge({
   overColor?: string;
   size?: number;
   stroke?: number;
-  centerValue: string;
+  centerValue: ReactNode;
   centerLabel: string;
   allowOverTarget?: boolean;
 }) {
@@ -39,7 +41,10 @@ export default function RingGauge({
           fill="none"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          style={{ transition: 'stroke-dashoffset 0.4s ease' }}
+          style={{
+            transition: 'stroke-dashoffset 0.6s cubic-bezier(.22,.9,.3,1), stroke 0.3s ease',
+            filter: `drop-shadow(0 0 6px color-mix(in srgb, ${over ? overColor : color} 55%, transparent))`,
+          }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">

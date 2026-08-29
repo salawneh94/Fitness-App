@@ -8,6 +8,7 @@ import { resizeImageFile } from '../lib/imageResize';
 import { savePhotoBlob, getPhotoBlob, deletePhotoBlob } from '../lib/photoStore';
 import Card from '../components/ui/Card';
 import StatTile from '../components/ui/StatTile';
+import CountUp from '../components/ui/CountUp';
 import WeightChart from '../components/charts/WeightChart';
 import StrengthChart from '../components/charts/StrengthChart';
 import RingGauge from '../components/charts/RingGauge';
@@ -70,10 +71,10 @@ export default function ProgressPage() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatTile icon={Flame} label="Current Streak" value={`${streaks.currentStreak}d`} sub="active days in a row" accent="var(--brand-lime)" />
-        <StatTile icon={Award} label="Best Streak" value={`${streaks.bestStreak}d`} sub="your longest run" accent="var(--series-4)" />
-        <StatTile icon={CalendarCheck} label="7-Day Adherence" value={`${Math.round(streaks.adherence7d * 100)}%`} sub="days logged this week" accent="var(--series-1)" />
-        <StatTile icon={CalendarCheck} label="30-Day Adherence" value={`${Math.round(streaks.adherence30d * 100)}%`} sub="days logged this month" accent="var(--series-3)" />
+        <StatTile icon={Flame} label="Current Streak" value={<CountUp value={streaks.currentStreak} suffix="d" />} sub="active days in a row" accent="var(--brand-lime)" />
+        <StatTile icon={Award} label="Best Streak" value={<CountUp value={streaks.bestStreak} suffix="d" />} sub="your longest run" accent="var(--series-4)" />
+        <StatTile icon={CalendarCheck} label="7-Day Adherence" value={<CountUp value={Math.round(streaks.adherence7d * 100)} suffix="%" />} sub="days logged this week" accent="var(--series-1)" />
+        <StatTile icon={CalendarCheck} label="30-Day Adherence" value={<CountUp value={Math.round(streaks.adherence30d * 100)} suffix="%" />} sub="days logged this month" accent="var(--series-3)" />
       </div>
 
       <Card title="Today's Activity">
@@ -82,7 +83,7 @@ export default function ProgressPage() {
             value={todaySteps}
             target={STEP_GOAL}
             color="var(--brand-lime)"
-            centerValue={todaySteps.toLocaleString()}
+            centerValue={<CountUp value={todaySteps} />}
             centerLabel="steps"
             allowOverTarget={false}
           />
@@ -90,7 +91,7 @@ export default function ProgressPage() {
             value={todaySleep}
             target={SLEEP_GOAL_HOURS}
             color="var(--series-1)"
-            centerValue={`${todaySleep}h`}
+            centerValue={<CountUp value={todaySleep} decimals={1} suffix="h" />}
             centerLabel="sleep"
             allowOverTarget={false}
           />
@@ -118,7 +119,7 @@ export default function ProgressPage() {
         ) : (
           <>
             <select
-              className="mb-3 rounded-lg border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
+              className="mb-3 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
               value={selectedExercise}
               onChange={(e) => setSelectedExercise(e.target.value)}
             >
@@ -197,7 +198,7 @@ function PhotosCard({
       action={
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-1.5 text-sm font-medium text-orange-600 dark:text-orange-400"
+          className="flex items-center gap-1.5 text-sm font-medium text-cyan-600 dark:text-cyan-400"
         >
           <Camera size={15} /> Add photo
         </button>
@@ -207,7 +208,7 @@ function PhotosCard({
       {sorted.length === 0 ? (
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="w-full flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed border-gray-200 dark:border-neutral-800 text-sm"
+          className="w-full flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed border-gray-200 dark:border-slate-800 text-sm"
           style={{ color: 'var(--text-muted)' }}
         >
           <Plus size={20} />
@@ -219,7 +220,7 @@ function PhotosCard({
             <button
               key={p.id}
               onClick={() => setViewing(p.id)}
-              className="aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-neutral-800 relative group"
+              className="aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-slate-800 relative group"
             >
               {urls[p.id] && <img src={urls[p.id]} alt={p.date} className="w-full h-full object-cover" />}
               <span className="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[10px] py-0.5">

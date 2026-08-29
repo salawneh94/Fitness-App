@@ -46,9 +46,9 @@ export default function TargetPlanNote({ profile, plan }: { profile: Profile; pl
   }
 
   return (
-    <div className="mt-4 pt-4 border-t border-orange-200/70 dark:border-orange-900/60">
+    <div className="mt-4 pt-4 border-t border-cyan-200/70 dark:border-cyan-900/60">
       <div className="flex items-start gap-2">
-        <Icon size={16} className="shrink-0 mt-0.5 text-orange-600 dark:text-orange-400" />
+        <Icon size={16} className="shrink-0 mt-0.5 text-cyan-600 dark:text-cyan-400" />
         <div className="min-w-0">
           <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
             {headline}
