@@ -27,13 +27,6 @@ export default function ProgressPage() {
   const addProgressPhoto = useAppStore((s) => s.addProgressPhoto);
   const removeProgressPhoto = useAppStore((s) => s.removeProgressPhoto);
 
-  if (!profile) return null;
-
-  const streaks = computeStreaks(foodEntries, workoutLogs, profile.createdAt.slice(0, 10));
-  const today = todayISO();
-  const todaySteps = stepsHistory.find((s) => s.date === today)?.steps ?? 0;
-  const todaySleep = sleepHistory.find((s) => s.date === today)?.hours ?? 0;
-
   const exerciseOptions = useMemo(() => {
     const map = new Map<string, string>();
     for (const log of workoutLogs) {
@@ -49,8 +42,12 @@ export default function ProgressPage() {
     if (!selectedExercise && exerciseOptions.length > 0) setSelectedExercise(exerciseOptions[0].id);
   }, [exerciseOptions, selectedExercise]);
 
+  // Hooks above always run in the same order regardless of `profile` — this early return must
+  // stay below all of them, or a profile becoming available/unavailable across renders would
+  // change the number of hooks called and break React's rules of hooks.
+  const unitSystem = profile?.unitSystem;
   const strengthData = useMemo(() => {
-    if (!selectedExercise) return [];
+    if (!selectedExercise || !unitSystem) return [];
     const byDate = new Map<string, number>();
     for (const log of workoutLogs) {
       const exLog = log.exerciseLogs?.find((e) => e.exerciseId === selectedExercise);
@@ -60,8 +57,15 @@ export default function ProgressPage() {
     }
     return Array.from(byDate.entries())
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, value]) => ({ date, value: Math.round(displayWeight(value, profile.unitSystem) * 10) / 10 }));
-  }, [workoutLogs, selectedExercise, profile.unitSystem]);
+      .map(([date, value]) => ({ date, value: Math.round(displayWeight(value, unitSystem) * 10) / 10 }));
+  }, [workoutLogs, selectedExercise, unitSystem]);
+
+  if (!profile) return null;
+
+  const streaks = computeStreaks(foodEntries, workoutLogs, profile.createdAt.slice(0, 10));
+  const today = todayISO();
+  const todaySteps = stepsHistory.find((s) => s.date === today)?.steps ?? 0;
+  const todaySleep = sleepHistory.find((s) => s.date === today)?.hours ?? 0;
 
   return (
     <div className="space-y-6">
