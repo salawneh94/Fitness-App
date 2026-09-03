@@ -64,6 +64,38 @@ interface AppState {
   addSavedMeal: (name: string, items: SavedMealItem[]) => void;
   removeSavedMeal: (id: string) => void;
   logSavedMeal: (mealTemplateId: string, targetMeal: MealType) => void;
+
+  /** Wipes all local state, e.g. after the account it belongs to has been deleted. Does not
+   * touch the sync queue or Supabase — the caller is expected to have already deleted the
+   * account server-side before calling this. */
+  resetLocalData: () => void;
+}
+
+function emptyState(): Pick<
+  AppState,
+  | 'profile'
+  | 'weightHistory'
+  | 'stepsHistory'
+  | 'sleepHistory'
+  | 'measurementsHistory'
+  | 'foodEntries'
+  | 'scheduledWorkouts'
+  | 'workoutLogs'
+  | 'progressPhotos'
+  | 'savedMeals'
+> {
+  return {
+    profile: null,
+    weightHistory: [],
+    stepsHistory: [],
+    sleepHistory: [],
+    measurementsHistory: [],
+    foodEntries: [],
+    scheduledWorkouts: [],
+    workoutLogs: [],
+    progressPhotos: [],
+    savedMeals: [],
+  };
 }
 
 function uid(): string {
@@ -73,16 +105,7 @@ function uid(): string {
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      profile: null,
-      weightHistory: [],
-      stepsHistory: [],
-      sleepHistory: [],
-      measurementsHistory: [],
-      foodEntries: [],
-      scheduledWorkouts: [],
-      workoutLogs: [],
-      progressPhotos: [],
-      savedMeals: [],
+      ...emptyState(),
 
       setProfile: (profile) => {
         set((state) => {
@@ -234,6 +257,8 @@ export const useAppStore = create<AppState>()(
         const userId = currentUserId();
         if (userId) for (const entry of newEntries) push.foodEntry(userId, entry);
       },
+
+      resetLocalData: () => set(emptyState()),
     }),
     {
       name: 'fitness-app-storage',

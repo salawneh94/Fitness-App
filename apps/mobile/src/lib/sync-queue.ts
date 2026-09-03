@@ -31,6 +31,9 @@ interface SyncQueueState {
   pendingOps: SyncOp[];
   enqueue: (op: SyncOp) => void;
   flush: () => Promise<void>;
+  /** Drops every pending op without pushing it — e.g. after the account they'd sync to no longer
+   * exists, where flushing would just retry against rows that were already cascade-deleted. */
+  clear: () => void;
 }
 
 let flushing = false;
@@ -74,6 +77,8 @@ export const useSyncQueue = create<SyncQueueState>()(
           flushing = false;
         }
       },
+
+      clear: () => set({ pendingOps: [] }),
     }),
     {
       name: 'fitness-app-sync-queue',

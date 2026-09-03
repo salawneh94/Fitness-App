@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { LogOut } from 'lucide-react-native';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { LogOut, Trash2 } from 'lucide-react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useSyncQueue } from '@/lib/sync-queue';
+import { supabase } from '@/lib/supabase';
 import type { ActivityLevel, Goal, Profile, Sex, UnitSystem } from '@fittrack/shared';
 import { ACTIVITY_LABELS, GOAL_LABELS, bmi, planDailyTargets, colors } from '@fittrack/shared';
 import Card from './ui/card';
@@ -32,6 +34,37 @@ export default function EditProfileForm() {
   const setProfile = useAppStore((s) => s.setProfile);
   const authEmail = useAuthStore((s) => s.session?.user.email);
   const signOut = useAuthStore((s) => s.signOut);
+  const resetLocalData = useAppStore((s) => s.resetLocalData);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    try {
+      const { error } = await supabase.functions.invoke('delete-account');
+      if (error) {
+        Alert.alert('Could not delete account', error.message ?? 'Please try again.');
+        return;
+      }
+      useSyncQueue.getState().clear();
+      resetLocalData();
+      await signOut();
+    } catch {
+      Alert.alert('Could not delete account', 'Check your connection and try again.');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  function confirmDeleteAccount() {
+    Alert.alert(
+      'Delete account',
+      'This permanently deletes your account and all your data — profile, logs, workouts, and photos. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete Account', style: 'destructive', onPress: handleDeleteAccount },
+      ]
+    );
+  }
 
   const [form, setForm] = useState({
     name: existing?.name ?? '',
@@ -244,6 +277,22 @@ export default function EditProfileForm() {
               <LogOut size={15} color={colors.statusCritical} />
               <Text className="text-sm font-medium" style={{ color: colors.statusCritical }}>
                 Sign out
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={confirmDeleteAccount}
+              disabled={deleting}
+              className="flex-row items-center justify-center gap-2 py-2.5 rounded-lg border mt-2"
+              style={{ borderColor: colors.gridline, opacity: deleting ? 0.5 : 1 }}
+            >
+              {deleting ? (
+                <ActivityIndicator size="small" color={colors.statusCritical} />
+              ) : (
+                <Trash2 size={15} color={colors.statusCritical} />
+              )}
+              <Text className="text-sm font-medium" style={{ color: colors.statusCritical }}>
+                {deleting ? 'Deleting…' : 'Delete Account'}
               </Text>
             </Pressable>
           </Card>
