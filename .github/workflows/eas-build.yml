@@ -1,0 +1,41 @@
+name: EAS Build
+
+# Manual, on-demand native builds — these consume EAS build minutes/credits, so unlike the
+# OTA update workflow this never runs automatically on push. Requires the EXPO_TOKEN repo
+# secret (Settings -> Secrets and variables -> Actions), generated at
+# https://expo.dev/accounts/<your-account>/settings/access-tokens.
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Platform to build"
+        required: true
+        type: choice
+        options: [ios, android, all]
+        default: all
+      profile:
+        description: "eas.json build profile"
+        required: true
+        type: choice
+        options: [development, preview, production]
+        default: preview
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Build
+        working-directory: apps/mobile
+        run: eas build --platform ${{ inputs.platform }} --profile ${{ inputs.profile }} --non-interactive --no-wait

@@ -9,9 +9,11 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0a0e17",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "bundleIdentifier": "com.fittrack.app",
+      "supportsTablet": false
     },
     "android": {
+      "package": "com.fittrack.app",
       "adaptiveIcon": {
         "backgroundColor": "#0a0e17",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

@@ -14,6 +14,7 @@ const loadProfile = () => import('./pages/ProfilePage');
 
 const SplashPage = lazyWithRetry(() => import('./pages/SplashPage'));
 const LoginPage = lazyWithRetry(() => import('./pages/LoginPage'));
+const PrivacyPolicyPage = lazyWithRetry(() => import('./pages/PrivacyPolicyPage'));
 const OverviewPage = lazyWithRetry(loadOverview);
 const NutritionPage = lazyWithRetry(loadNutrition);
 const WorkoutsPage = lazyWithRetry(loadWorkouts);
@@ -49,6 +50,7 @@ function App() {
         <Routes>
           <Route path="/welcome" element={<SplashPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
           <Route element={<Layout />}>
             <Route path="/profile" element={<ProfilePage />} />
             <Route

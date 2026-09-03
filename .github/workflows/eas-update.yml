@@ -1,0 +1,37 @@
+name: Publish EAS Update (preview)
+
+# Publishes a JS-only OTA update on every push touching the mobile app, so anyone with the
+# Expo Go app (or a dev-client build) pointed at the "preview" channel always sees the latest
+# commit without needing eas update run by hand. Requires the EXPO_TOKEN repo secret
+# (Settings -> Secrets and variables -> Actions), generated at
+# https://expo.dev/accounts/<your-account>/settings/access-tokens.
+
+on:
+  push:
+    branches:
+      - main
+      - claude/fitness-app-features-g8x97r
+    paths:
+      - "apps/mobile/**"
+      - "packages/shared/**"
+      - "pnpm-lock.yaml"
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Publish update
+        working-directory: apps/mobile
+        run: eas update --branch preview --message "${{ github.event.head_commit.message || 'Manual update' }}" --non-interactive
