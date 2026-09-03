@@ -7,25 +7,30 @@ import { ActivityIndicator, AppState, View } from 'react-native';
 import { colors } from '@fittrack/shared';
 import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useEntitlementStore } from '@/store/useEntitlementStore';
 import { useHydrated } from '@/store/useHydrated';
 import { pullRemote } from '@/lib/sync';
 import { useSyncQueue } from '@/lib/sync-queue';
 import OnboardingWizard from '@/components/onboarding-wizard';
 import AuthScreen from '@/components/auth-screen';
+import PaywallScreen from '@/components/paywall-screen';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const storeHydrated = useHydrated();
   const authHydrated = useAuthStore((s) => s.hydrated);
+  const entitlementHydrated = useEntitlementStore((s) => s.hydrated);
+  const entitlementActive = useEntitlementStore((s) => s.active);
   const session = useAuthStore((s) => s.session);
   const profile = useAppStore((s) => s.profile);
 
   useEffect(() => {
     useAuthStore.getState().init();
+    void useEntitlementStore.getState().init();
   }, []);
 
-  const ready = storeHydrated && authHydrated;
+  const ready = storeHydrated && authHydrated && entitlementHydrated;
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
@@ -41,6 +46,9 @@ export default function RootLayout() {
     if (lastPulledFor.current !== userId) {
       lastPulledFor.current = userId;
       void pullRemote(userId);
+      // Ties RevenueCat's identity to the Supabase user id, so the webhook can join purchase
+      // events back to the right account regardless of which device made the purchase.
+      void useEntitlementStore.getState().logInAndRefresh(userId);
     }
     void useSyncQueue.getState().flush();
 
@@ -75,6 +83,17 @@ export default function RootLayout() {
       <>
         <StatusBar style="light" />
         <OnboardingWizard />
+      </>
+    );
+  }
+
+  // Everything past onboarding sits behind one entitlement — no separate free tier (see the
+  // approved plan's paywall decision).
+  if (!entitlementActive) {
+    return (
+      <>
+        <StatusBar style="light" />
+        <PaywallScreen />
       </>
     );
   }

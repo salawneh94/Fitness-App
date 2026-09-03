@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { useEntitlementStore } from './useEntitlementStore';
 
 interface AuthState {
   session: Session | null;
@@ -44,5 +45,6 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   signOut: async () => {
     await supabase.auth.signOut();
+    await useEntitlementStore.getState().logOut();
   },
 }));
