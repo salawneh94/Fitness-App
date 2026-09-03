@@ -39,6 +39,13 @@
         {
           "cameraPermission": "FitTrack uses the camera to scan food barcodes for instant nutrition info."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "FitTrack uses your photo library to attach progress photos.",
+          "cameraPermission": "FitTrack uses the camera to take progress photos."
+        }
       ]
     ],
     "experiments": {
