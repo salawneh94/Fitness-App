@@ -1,4 +1,5 @@
 export * from './calc';
+export * from './theme';
 export * from './streaks';
 export * from './units';
 export * from './planRecommendation';
