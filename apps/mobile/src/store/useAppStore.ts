@@ -17,6 +17,8 @@ import {
   type WeightEntry,
   type WorkoutLogEntry,
 } from '@fittrack/shared';
+import { useAuthStore } from './useAuthStore';
+import { push } from '@/lib/sync';
 
 function upsertByDate<T extends { date: string }>(history: T[], entry: T): T[] {
   const idx = history.findIndex((h) => h.date === entry.date);
@@ -24,6 +26,11 @@ function upsertByDate<T extends { date: string }>(history: T[], entry: T): T[] {
   const next = [...history];
   next[idx] = entry;
   return next;
+}
+
+/** The signed-in user's id, or null when signed out — every sync push is a no-op until then. */
+function currentUserId(): string | null {
+  return useAuthStore.getState().session?.user.id ?? null;
 }
 
 interface AppState {
@@ -77,7 +84,7 @@ export const useAppStore = create<AppState>()(
       progressPhotos: [],
       savedMeals: [],
 
-      setProfile: (profile) =>
+      setProfile: (profile) => {
         set((state) => {
           const alreadyLogged = state.weightHistory.some((w) => w.date === todayISO());
           return {
@@ -86,92 +93,140 @@ export const useAppStore = create<AppState>()(
               ? state.weightHistory
               : [...state.weightHistory, { date: todayISO(), weightKg: profile.weightKg }],
           };
-        }),
+        });
+        const userId = currentUserId();
+        if (userId) {
+          push.profile(userId, profile);
+          const entry = get().weightHistory.find((w) => w.date === todayISO());
+          if (entry) push.weight(userId, entry);
+        }
+      },
 
-      updateWeight: (weightKg) =>
+      updateWeight: (weightKg) => {
         set((state) => ({
           weightHistory: upsertByDate(state.weightHistory, { date: todayISO(), weightKg }),
           profile: state.profile ? { ...state.profile, weightKg } : state.profile,
-        })),
+        }));
+        const userId = currentUserId();
+        if (userId) {
+          push.weight(userId, { date: todayISO(), weightKg });
+          const profile = get().profile;
+          if (profile) push.profile(userId, profile);
+        }
+      },
 
-      updateSteps: (steps) =>
+      updateSteps: (steps) => {
         set((state) => ({
           stepsHistory: upsertByDate(state.stepsHistory, { date: todayISO(), steps }),
-        })),
+        }));
+        const userId = currentUserId();
+        if (userId) push.steps(userId, { date: todayISO(), steps });
+      },
 
-      updateSleep: (hours) =>
+      updateSleep: (hours) => {
         set((state) => ({
           sleepHistory: upsertByDate(state.sleepHistory, { date: todayISO(), hours }),
-        })),
+        }));
+        const userId = currentUserId();
+        if (userId) push.sleep(userId, { date: todayISO(), hours });
+      },
 
-      updateMeasurement: (fields) =>
+      updateMeasurement: (fields) => {
+        const date = todayISO();
         set((state) => {
-          const date = todayISO();
           const existing = state.measurementsHistory.find((m) => m.date === date);
           return {
             measurementsHistory: upsertByDate(state.measurementsHistory, { date, ...existing, ...fields }),
           };
-        }),
+        });
+        const userId = currentUserId();
+        if (userId) {
+          const entry = get().measurementsHistory.find((m) => m.date === date);
+          if (entry) push.measurement(userId, entry);
+        }
+      },
 
-      addFoodEntry: (entry) =>
-        set((state) => ({
-          foodEntries: [
-            ...state.foodEntries,
-            { ...entry, id: uid(), loggedAt: new Date().toISOString() },
-          ],
-        })),
+      addFoodEntry: (entry) => {
+        const full = { ...entry, id: uid(), loggedAt: new Date().toISOString() };
+        set((state) => ({ foodEntries: [...state.foodEntries, full] }));
+        const userId = currentUserId();
+        if (userId) push.foodEntry(userId, full);
+      },
 
-      removeFoodEntry: (id) =>
-        set((state) => ({ foodEntries: state.foodEntries.filter((e) => e.id !== id) })),
+      removeFoodEntry: (id) => {
+        set((state) => ({ foodEntries: state.foodEntries.filter((e) => e.id !== id) }));
+        if (currentUserId()) push.deleteFoodEntry(id);
+      },
 
-      setScheduledWorkouts: (workouts) => set({ scheduledWorkouts: workouts }),
+      setScheduledWorkouts: (workouts) => {
+        const previous = get().scheduledWorkouts;
+        set({ scheduledWorkouts: workouts });
+        const userId = currentUserId();
+        if (userId) {
+          const nextByDay = new Map(workouts.map((w) => [w.day, w]));
+          const allDays = new Set([...previous.map((w) => w.day), ...workouts.map((w) => w.day)]);
+          for (const day of allDays) {
+            const next = nextByDay.get(day);
+            if (next) push.scheduledWorkout(userId, next);
+            else push.deleteScheduledWorkoutDay(day);
+          }
+        }
+      },
 
-      addWorkoutLog: (entry) =>
-        set((state) => ({
-          workoutLogs: [...state.workoutLogs, { ...entry, id: uid() }],
-        })),
+      addWorkoutLog: (entry) => {
+        const full = { ...entry, id: uid() };
+        set((state) => ({ workoutLogs: [...state.workoutLogs, full] }));
+        const userId = currentUserId();
+        if (userId) push.workoutLog(userId, full);
+      },
 
-      removeWorkoutLog: (id) =>
-        set((state) => ({ workoutLogs: state.workoutLogs.filter((e) => e.id !== id) })),
+      removeWorkoutLog: (id) => {
+        set((state) => ({ workoutLogs: state.workoutLogs.filter((e) => e.id !== id) }));
+        if (currentUserId()) push.deleteWorkoutLog(id);
+      },
 
       addProgressPhoto: (photo) => {
         const id = uid();
-        set((state) => ({ progressPhotos: [...state.progressPhotos, { ...photo, id }] }));
+        const full = { ...photo, id };
+        set((state) => ({ progressPhotos: [...state.progressPhotos, full] }));
+        const userId = currentUserId();
+        if (userId) push.progressPhoto(userId, full);
         return id;
       },
 
-      removeProgressPhoto: (id) =>
-        set((state) => ({ progressPhotos: state.progressPhotos.filter((p) => p.id !== id) })),
+      removeProgressPhoto: (id) => {
+        set((state) => ({ progressPhotos: state.progressPhotos.filter((p) => p.id !== id) }));
+        if (currentUserId()) push.deleteProgressPhoto(id);
+      },
 
-      addSavedMeal: (name, items) =>
-        set((state) => ({
-          savedMeals: [
-            ...state.savedMeals,
-            { id: uid(), name, items, createdAt: new Date().toISOString() },
-          ],
-        })),
+      addSavedMeal: (name, items) => {
+        const full = { id: uid(), name, items, createdAt: new Date().toISOString() };
+        set((state) => ({ savedMeals: [...state.savedMeals, full] }));
+        const userId = currentUserId();
+        if (userId) push.savedMeal(userId, full);
+      },
 
-      removeSavedMeal: (id) =>
-        set((state) => ({ savedMeals: state.savedMeals.filter((m) => m.id !== id) })),
+      removeSavedMeal: (id) => {
+        set((state) => ({ savedMeals: state.savedMeals.filter((m) => m.id !== id) }));
+        if (currentUserId()) push.deleteSavedMeal(id);
+      },
 
       logSavedMeal: (mealTemplateId, targetMeal) => {
         const meal = get().savedMeals.find((m) => m.id === mealTemplateId);
         if (!meal) return;
         const date = todayISO();
         const loggedAt = new Date().toISOString();
-        set((state) => ({
-          foodEntries: [
-            ...state.foodEntries,
-            ...meal.items.map((item) => ({
-              ...item,
-              id: uid(),
-              date,
-              meal: targetMeal,
-              source: 'manual' as const,
-              loggedAt,
-            })),
-          ],
+        const newEntries = meal.items.map((item) => ({
+          ...item,
+          id: uid(),
+          date,
+          meal: targetMeal,
+          source: 'manual' as const,
+          loggedAt,
         }));
+        set((state) => ({ foodEntries: [...state.foodEntries, ...newEntries] }));
+        const userId = currentUserId();
+        if (userId) for (const entry of newEntries) push.foodEntry(userId, entry);
       },
     }),
     {

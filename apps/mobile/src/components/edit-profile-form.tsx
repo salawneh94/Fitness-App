@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { LogOut } from 'lucide-react-native';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import type { ActivityLevel, Goal, Profile, Sex, UnitSystem } from '@fittrack/shared';
 import { ACTIVITY_LABELS, GOAL_LABELS, bmi, planDailyTargets, colors } from '@fittrack/shared';
 import Card from './ui/card';
@@ -28,6 +30,8 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 export default function EditProfileForm() {
   const existing = useAppStore((s) => s.profile);
   const setProfile = useAppStore((s) => s.setProfile);
+  const authEmail = useAuthStore((s) => s.session?.user.email);
+  const signOut = useAuthStore((s) => s.signOut);
 
   const [form, setForm] = useState({
     name: existing?.name ?? '',
@@ -220,6 +224,29 @@ export default function EditProfileForm() {
           >
             <Text className="text-white font-semibold">Save Changes</Text>
           </Pressable>
+
+          <Card title="Account">
+            {authEmail && (
+              <Text className="text-sm mb-4" style={{ color: colors.textSecondary }}>
+                Signed in as {authEmail}
+              </Text>
+            )}
+            <Pressable
+              onPress={() =>
+                Alert.alert('Sign out', 'You can sign back in any time to pick up where you left off.', [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
+                ])
+              }
+              className="flex-row items-center justify-center gap-2 py-2.5 rounded-lg border"
+              style={{ borderColor: colors.gridline }}
+            >
+              <LogOut size={15} color={colors.statusCritical} />
+              <Text className="text-sm font-medium" style={{ color: colors.statusCritical }}>
+                Sign out
+              </Text>
+            </Pressable>
+          </Card>
         </View>
       </ScrollView>
     </SafeAreaView>
