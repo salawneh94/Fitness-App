@@ -12,6 +12,7 @@ import type {
 } from '@fittrack/shared';
 import { supabase } from './supabase';
 import { useSyncQueue, type SyncOp, type SyncTable } from './sync-queue';
+import { deletePhotoFromStorage, downloadPhotoFromStorage, hasPhotoFile, uploadPhotoToStorage } from './photo-store';
 import { useAppStore } from '@/store/useAppStore';
 
 function pendingKeysForTable(table: SyncTable, op?: SyncOp['op']): Set<string> {
@@ -269,10 +270,12 @@ function deleteWorkoutLog(id: string) {
   enqueue({ key: `workout_logs:${id}`, table: 'workout_logs', op: 'delete', match: { id } });
 }
 
-// --- progress photos (metadata only until M4) ---------------------------
+// --- progress photos ------------------------------------------------------
+// The row (date/note/storage_path) goes through the normal upsert queue like everything else;
+// the image bytes don't fit that shape, so they're uploaded to Storage directly, out of band.
 
-function progressPhotoToRow(userId: string, p: ProgressPhoto) {
-  return { id: p.id, user_id: userId, date: p.date, note: p.note ?? null };
+function progressPhotoToRow(userId: string, p: ProgressPhoto, storagePath?: string) {
+  return { id: p.id, user_id: userId, date: p.date, note: p.note ?? null, storage_path: storagePath ?? null };
 }
 
 function progressPhotoFromRow(row: Record<string, any>): ProgressPhoto {
@@ -283,8 +286,21 @@ function pushProgressPhoto(userId: string, photo: ProgressPhoto) {
   enqueue({ key: `progress_photos:${photo.id}`, table: 'progress_photos', op: 'upsert', row: progressPhotoToRow(userId, photo) });
 }
 
-function deleteProgressPhoto(id: string) {
+function deleteProgressPhoto(userId: string, id: string) {
   enqueue({ key: `progress_photos:${id}`, table: 'progress_photos', op: 'delete', match: { id } });
+  // Best-effort: if this fails offline, the object is simply orphaned in Storage — it's already
+  // gone from every user-visible list, so nothing depends on this succeeding immediately.
+  void deletePhotoFromStorage(userId, id).catch(() => {});
+}
+
+/**
+ * Uploads the local image for `id` to Storage and stamps its row with the resulting path, so
+ * other devices know there's a file to pull down. Fire-and-forget from the caller's side — a
+ * failure here just means the row's storage_path stays null and a later run can retry.
+ */
+export async function syncProgressPhotoFile(userId: string, photo: ProgressPhoto): Promise<void> {
+  const path = await uploadPhotoToStorage(userId, photo.id);
+  enqueue({ key: `progress_photos:${photo.id}`, table: 'progress_photos', op: 'upsert', row: progressPhotoToRow(userId, photo, path) });
 }
 
 export const push = {
@@ -303,6 +319,7 @@ export const push = {
   deleteWorkoutLog,
   progressPhoto: pushProgressPhoto,
   deleteProgressPhoto,
+  syncProgressPhotoFile,
 };
 
 /**
@@ -346,4 +363,13 @@ export async function pullRemote(userId: string): Promise<void> {
     workoutLogs: mergeCollection('workout_logs', (e) => e.id, (workoutLogsRes.data ?? []).map(workoutLogFromRow), current.workoutLogs),
     progressPhotos: mergeCollection('progress_photos', (e) => e.id, (photosRes.data ?? []).map(progressPhotoFromRow), current.progressPhotos),
   });
+
+  // Photos are metadata rows plus a Storage object — download any file this device doesn't have
+  // yet (e.g. a photo taken on another device). Fire-and-forget in the background; each is
+  // independent, so one failure doesn't block the rest.
+  for (const row of photosRes.data ?? []) {
+    if (row.storage_path && !hasPhotoFile(row.id)) {
+      void downloadPhotoFromStorage(userId, row.id).catch(() => {});
+    }
+  }
 }

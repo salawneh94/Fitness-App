@@ -190,13 +190,19 @@ export const useAppStore = create<AppState>()(
         const full = { ...photo, id };
         set((state) => ({ progressPhotos: [...state.progressPhotos, full] }));
         const userId = currentUserId();
-        if (userId) push.progressPhoto(userId, full);
+        if (userId) {
+          push.progressPhoto(userId, full);
+          // The image file is already on disk (caller saves it before calling this) — upload it
+          // and stamp the row's storage_path once that's done.
+          void push.syncProgressPhotoFile(userId, full).catch(() => {});
+        }
         return id;
       },
 
       removeProgressPhoto: (id) => {
         set((state) => ({ progressPhotos: state.progressPhotos.filter((p) => p.id !== id) }));
-        if (currentUserId()) push.deleteProgressPhoto(id);
+        const userId = currentUserId();
+        if (userId) push.deleteProgressPhoto(userId, id);
       },
 
       addSavedMeal: (name, items) => {
