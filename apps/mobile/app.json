@@ -33,6 +33,12 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "FitTrack uses the camera to scan food barcodes for instant nutrition info."
+        }
       ]
     ],
     "experiments": {
