@@ -14,19 +14,14 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      // Disabled for now: real-device debugging kept getting confused by stale/partially-evicted
-      // service worker caches from earlier deployments (this app shipped many times in a short
-      // window). selfDestroying ships a SW whose only job is to unregister itself and wipe all
-      // caches for anyone who still has an old one installed, cleanly migrating everyone off it.
-      selfDestroying: true,
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'FitTrack — Fitness & Nutrition Tracker',
         short_name: 'FitTrack',
         description: 'Track workouts, nutrition, and progress — all stored on your device.',
-        theme_color: '#f97316',
-        background_color: '#0b0d14',
+        theme_color: '#0a0e17',
+        background_color: '#0a0e17',
         display: 'standalone',
         start_url: base,
         icons: [
