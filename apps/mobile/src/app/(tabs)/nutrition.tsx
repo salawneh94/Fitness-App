@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Plus, ScanBarcode, Trash2 } from 'lucide-react-native';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import type { FoodEntry, MealType, Micronutrients } from '@fittrack/shared';
@@ -11,6 +11,7 @@ import MacroBars from '@/components/charts/macro-bars';
 import MicronutrientList from '@/components/micronutrient-list';
 import AddFoodModal from '@/components/add-food-modal';
 import SavedMealsSection from '@/components/saved-meals-section';
+import PressableScale from '@/components/ui/pressable-scale';
 
 const MEALS: { key: MealType; label: string }[] = [
   { key: 'breakfast', label: 'Breakfast' },
@@ -127,19 +128,19 @@ export default function NutritionScreen() {
                             {e.quantity} × {e.servingLabel ?? 'serving'} · {Math.round(e.calories * e.quantity)} kcal
                           </Text>
                         </View>
-                        <Pressable onPress={() => removeFoodEntry(e.id)} className="p-1.5">
+                        <PressableScale hapticStyle="warning" onPress={() => removeFoodEntry(e.id)} className="p-1.5">
                           <Trash2 size={15} color={colors.textMuted} />
-                        </Pressable>
+                        </PressableScale>
                       </View>
                     ))}
                   </View>
                 )}
-                <Pressable onPress={() => setAddingMeal(key)} className="flex-row items-center gap-1.5">
+                <PressableScale onPress={() => setAddingMeal(key)} className="flex-row items-center gap-1.5">
                   <Plus size={16} color={colors.brandPrimary} />
                   <Text className="text-sm font-medium" style={{ color: colors.brandPrimary }}>
                     Add food
                   </Text>
-                </Pressable>
+                </PressableScale>
               </Card>
             );
           })}

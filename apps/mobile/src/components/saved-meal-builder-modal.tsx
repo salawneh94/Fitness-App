@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react-native';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, ScrollView, Text, View } from 'react-native';
 import { useAppStore } from '@/store/useAppStore';
 import type { SavedMealItem } from '@fittrack/shared';
 import { colors } from '@fittrack/shared';
 import TextField from './ui/text-field';
+import PressableScale from '@/components/ui/pressable-scale';
 
 const emptyItem: SavedMealItem = { name: '', calories: 0, proteinG: 0, carbsG: 0, fatG: 0, quantity: 1, servingLabel: 'serving' };
 
@@ -49,9 +50,9 @@ export default function SavedMealBuilderModal({ onClose }: { onClose: () => void
             <Text className="font-semibold" style={{ color: colors.textPrimary }}>
               New Saved Meal
             </Text>
-            <Pressable onPress={onClose} className="p-1">
+            <PressableScale onPress={onClose} className="p-1">
               <X size={18} color={colors.textPrimary} />
-            </Pressable>
+            </PressableScale>
           </View>
 
           <View className="mb-4">
@@ -75,9 +76,9 @@ export default function SavedMealBuilderModal({ onClose }: { onClose: () => void
                       {item.quantity} × {item.servingLabel} · {Math.round(item.calories * item.quantity)} kcal
                     </Text>
                   </View>
-                  <Pressable onPress={() => removeItem(idx)} className="p-1.5">
+                  <PressableScale hapticStyle="warning" onPress={() => removeItem(idx)} className="p-1.5">
                     <Trash2 size={15} color={colors.textMuted} />
-                  </Pressable>
+                  </PressableScale>
                 </View>
               ))}
               <View className="pt-2 flex-row justify-between">
@@ -144,7 +145,7 @@ export default function SavedMealBuilderModal({ onClose }: { onClose: () => void
                   onChangeText={(v) => setDraft((d) => ({ ...d, servingLabel: v }))}
                 />
               </View>
-              <Pressable
+              <PressableScale hapticStyle="success"
                 onPress={addItem}
                 className="flex-row items-center justify-center gap-1.5 py-2.5 rounded-lg border border-dashed"
                 style={{ borderColor: colors.gridline }}
@@ -153,24 +154,24 @@ export default function SavedMealBuilderModal({ onClose }: { onClose: () => void
                 <Text className="text-sm font-medium" style={{ color: colors.brandPrimary }}>
                   Add item to meal
                 </Text>
-              </Pressable>
+              </PressableScale>
             </View>
           </View>
 
           <View className="flex-row gap-2">
-            <Pressable onPress={onClose} className="flex-1 py-2.5 rounded-lg border items-center" style={{ borderColor: colors.gridline }}>
+            <PressableScale onPress={onClose} className="flex-1 py-2.5 rounded-lg border items-center" style={{ borderColor: colors.gridline }}>
               <Text className="text-sm font-medium" style={{ color: colors.textPrimary }}>
                 Cancel
               </Text>
-            </Pressable>
-            <Pressable
+            </PressableScale>
+            <PressableScale hapticStyle="success"
               onPress={save}
               disabled={!canSave}
               className="flex-1 py-2.5 rounded-full items-center"
               style={{ backgroundColor: colors.brandPrimaryDark, opacity: canSave ? 1 : 0.4 }}
             >
               <Text className="text-white text-sm font-semibold">Save Meal</Text>
-            </Pressable>
+            </PressableScale>
           </View>
         </ScrollView>
       </View>

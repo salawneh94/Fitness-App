@@ -1,7 +1,9 @@
-import type { ReactNode } from 'react';
-import { View, Text } from 'react-native';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { AccessibilityInfo, Animated, View, Text } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { colors } from '@fittrack/shared';
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export default function RingGauge({
   value,
@@ -30,11 +32,35 @@ export default function RingGauge({
   const offset = circumference * (1 - pct);
   const over = allowOverTarget && value > target;
 
+  // The arc sweeps to its value rather than snapping there. strokeDashoffset isn't a transform,
+  // so this can't use the native driver — but it's one value over one animation, which the JS
+  // thread handles without trouble.
+  const animatedOffset = useRef(new Animated.Value(circumference)).current;
+
+  useEffect(() => {
+    let cancelled = false;
+    AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion) => {
+      if (cancelled) return;
+      if (reduceMotion) {
+        animatedOffset.setValue(offset);
+        return;
+      }
+      Animated.timing(animatedOffset, {
+        toValue: offset,
+        duration: 900,
+        useNativeDriver: false,
+      }).start();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [offset, animatedOffset]);
+
   return (
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
         <Circle cx={size / 2} cy={size / 2} r={r} stroke={colors.gridline} strokeWidth={stroke} fill="none" />
-        <Circle
+        <AnimatedCircle
           cx={size / 2}
           cy={size / 2}
           r={r}
@@ -43,7 +69,7 @@ export default function RingGauge({
           strokeLinecap="round"
           fill="none"
           strokeDasharray={circumference}
-          strokeDashoffset={offset}
+          strokeDashoffset={animatedOffset}
         />
       </Svg>
       <View className="absolute inset-0 items-center justify-center">

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import type { FoodEntry } from '@fittrack/shared';
 import { colors, toISODate } from '@fittrack/shared';
 import SimpleBarChart from './simple-bar-chart';
+import PressableScale from '@/components/ui/pressable-scale';
 
 function addDays(date: Date, delta: number): Date {
   const d = new Date(date);
@@ -34,7 +35,7 @@ export default function CalorieTrendChart({ foodEntries, targetCalories }: { foo
     <View>
       <View className="flex-row justify-end gap-1 mb-2">
         {([7, 30] as const).map((r) => (
-          <Pressable
+          <PressableScale hapticStyle="selection"
             key={r}
             onPress={() => setRange(r)}
             className="px-2.5 py-1 rounded-full"
@@ -43,7 +44,7 @@ export default function CalorieTrendChart({ foodEntries, targetCalories }: { foo
             <Text className="text-xs font-medium" style={{ color: range === r ? 'white' : colors.textMuted }}>
               {r}d
             </Text>
-          </Pressable>
+          </PressableScale>
         ))}
       </View>
       {!hasData ? (

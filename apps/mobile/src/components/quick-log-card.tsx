@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Check } from 'lucide-react-native';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useAppStore } from '@/store/useAppStore';
 import { todayISO, colors } from '@fittrack/shared';
 import Card from './ui/card';
 import WeightInput from './ui/weight-input';
 import TextField from './ui/text-field';
+import PressableScale from '@/components/ui/pressable-scale';
 
 export default function QuickLogCard() {
   const profile = useAppStore((s) => s.profile);
@@ -64,14 +65,14 @@ export default function QuickLogCard() {
           />
         </View>
       </View>
-      <Pressable
+      <PressableScale hapticStyle="success"
         onPress={save}
         className="flex-row items-center justify-center gap-1.5 px-4 py-2 rounded-full self-start"
         style={{ backgroundColor: colors.brandPrimaryDark }}
       >
         {saved && <Check size={15} color="#fff" />}
         <Text className="text-white text-sm font-semibold">{saved ? 'Saved' : 'Save'}</Text>
-      </Pressable>
+      </PressableScale>
     </Card>
   );
 }

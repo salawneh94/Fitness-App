@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { randomUUID } from 'expo-crypto';
 import { CheckCircle2, Dumbbell, PlayCircle, Sparkles } from 'lucide-react-native';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import type { Exercise, ScheduledWorkout, Weekday } from '@fittrack/shared';
 import { PLAN_TEMPLATES, colors, recommendPlan } from '@fittrack/shared';
 import Card from '@/components/ui/card';
 import ExerciseVideoModal from '@/components/exercise-video-modal';
+import PressableScale from '@/components/ui/pressable-scale';
 
 const WEEKDAYS: Weekday[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -70,7 +71,7 @@ export default function PlansScreen() {
             const isRecommended = recommendation?.template.id === t.id;
             return (
               <Card key={t.id} className={isRecommended ? '!p-0' : '!p-0'}>
-                <Pressable onPress={() => setExpandedId(isOpen ? null : t.id)} className="flex-row items-center justify-between gap-4 p-5">
+                <PressableScale hapticStyle="selection" onPress={() => setExpandedId(isOpen ? null : t.id)} className="flex-row items-center justify-between gap-4 p-5">
                   <View className="flex-row items-center gap-3 flex-1 min-w-0">
                     <View
                       className="w-10 h-10 rounded-xl items-center justify-center"
@@ -102,7 +103,7 @@ export default function PlansScreen() {
                       </Text>
                     </View>
                   )}
-                </Pressable>
+                </PressableScale>
 
                 {isOpen && (
                   <View className="px-5 pb-5 pt-4 border-t" style={{ borderColor: colors.gridline }}>
@@ -121,9 +122,9 @@ export default function PlansScreen() {
                                 <Text className="text-sm flex-1 mr-2" style={{ color: colors.textPrimary }}>
                                   {ex.name}
                                 </Text>
-                                <Pressable onPress={() => setVideoExercise(ex)}>
+                                <PressableScale onPress={() => setVideoExercise(ex)}>
                                   <PlayCircle size={15} color={colors.brandPrimary} />
-                                </Pressable>
+                                </PressableScale>
                               </View>
                             ))}
                           </View>
@@ -131,15 +132,15 @@ export default function PlansScreen() {
                       ))}
                     </View>
                     <View className="flex-row gap-2 flex-wrap">
-                      <Pressable
+                      <PressableScale hapticStyle="success"
                         onPress={() => applyPlan(t.id)}
                         className="px-4 py-2 rounded-full"
                         style={{ backgroundColor: colors.brandPrimaryDark }}
                       >
                         <Text className="text-sm font-semibold text-white">Apply to weekly schedule</Text>
-                      </Pressable>
+                      </PressableScale>
                       {isApplied && (
-                        <Pressable
+                        <PressableScale
                           onPress={() => router.push('/workouts')}
                           className="px-4 py-2 rounded-lg border"
                           style={{ borderColor: colors.gridline }}
@@ -147,7 +148,7 @@ export default function PlansScreen() {
                           <Text className="text-sm font-semibold" style={{ color: colors.textPrimary }}>
                             View schedule
                           </Text>
-                        </Pressable>
+                        </PressableScale>
                       )}
                     </View>
                   </View>

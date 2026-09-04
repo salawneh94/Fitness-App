@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, ChevronLeft, ChevronRight, Pause, Play, PlayCircle, Plus, SkipForward, X } from 'lucide-react-native';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { Modal, Text, View } from 'react-native';
 import type { ExerciseLogEntry, ScheduledWorkout, UnitSystem } from '@fittrack/shared';
 import { displayWeight, toKgFromDisplay, weightUnitLabel } from '@fittrack/shared';
 import ExerciseVideoModal from './exercise-video-modal';
 import Confetti from './confetti';
 import TextField from './ui/text-field';
+import PressableScale from '@/components/ui/pressable-scale';
 
 const REST_PRESETS = [30, 60, 90, 120, 180];
 
@@ -114,9 +115,9 @@ export default function GuidedWorkoutPlayer({
     <Modal visible animationType="slide" onRequestClose={onCancel}>
       <View className="flex-1 bg-black">
         <View className="flex-row items-center justify-between px-4 py-4">
-          <Pressable onPress={onCancel} className="p-2 -ml-2">
+          <PressableScale onPress={onCancel} className="p-2 -ml-2">
             <X size={20} color="white" />
-          </Pressable>
+          </PressableScale>
           <Text className="text-sm font-medium text-white/70">
             Exercise {exerciseIndex + 1} / {workout.exercises.length}
           </Text>
@@ -139,7 +140,7 @@ export default function GuidedWorkoutPlayer({
               <Text className="text-6xl font-bold text-white mb-6">{formatClock(restSeconds ?? 0)}</Text>
               <View className="flex-row gap-2 mb-8">
                 {REST_PRESETS.map((s) => (
-                  <Pressable
+                  <PressableScale
                     key={s}
                     onPress={() => {
                       setRestSeconds(s);
@@ -148,16 +149,16 @@ export default function GuidedWorkoutPlayer({
                     className="px-3 py-1.5 rounded-full border border-white/20"
                   >
                     <Text className="text-xs text-white/70">{s}s</Text>
-                  </Pressable>
+                  </PressableScale>
                 ))}
               </View>
               <View className="flex-row items-center gap-4">
-                <Pressable onPress={() => setRunning((r) => !r)} className="w-14 h-14 rounded-full bg-white/10 items-center justify-center">
+                <PressableScale onPress={() => setRunning((r) => !r)} className="w-14 h-14 rounded-full bg-white/10 items-center justify-center">
                   {running ? <Pause size={22} color="white" /> : <Play size={22} color="white" />}
-                </Pressable>
-                <Pressable onPress={() => setResting(false)} className="w-14 h-14 rounded-full bg-cyan-600 items-center justify-center">
+                </PressableScale>
+                <PressableScale onPress={() => setResting(false)} className="w-14 h-14 rounded-full bg-cyan-600 items-center justify-center">
                   <SkipForward size={22} color="white" />
-                </Pressable>
+                </PressableScale>
               </View>
             </>
           ) : (
@@ -167,12 +168,12 @@ export default function GuidedWorkoutPlayer({
               <Text className="text-white/60 mb-6 text-center">
                 {exercise.sets && exercise.reps ? `${exercise.sets} sets × ${exercise.reps}` : exercise.notes ?? 'Log your sets below'}
               </Text>
-              <Pressable onPress={() => setShowVideo(true)} className="flex-row items-center gap-1.5 mb-8">
+              <PressableScale onPress={() => setShowVideo(true)} className="flex-row items-center gap-1.5 mb-8">
                 <PlayCircle size={16} color={'#22d3ee'} />
                 <Text className="text-sm" style={{ color: '#22d3ee' }}>
                   Watch demo
                 </Text>
-              </Pressable>
+              </PressableScale>
               {showVideo && <ExerciseVideoModal exercise={exercise} onClose={() => setShowVideo(false)} />}
 
               {setsForExercise.length > 0 && (
@@ -206,16 +207,16 @@ export default function GuidedWorkoutPlayer({
                   onChangeText={setDraftReps}
                   style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.2)', color: 'white' }}
                 />
-                <Pressable onPress={logSet} className="w-11 h-11 rounded-full bg-cyan-600 items-center justify-center">
+                <PressableScale hapticStyle="success" onPress={logSet} className="w-11 h-11 rounded-full bg-cyan-600 items-center justify-center">
                   <Plus size={20} color="white" />
-                </Pressable>
+                </PressableScale>
               </View>
             </View>
           )}
         </View>
 
         <View className="flex-row items-center justify-between px-6 pt-6 pb-8 gap-3">
-          <Pressable
+          <PressableScale
             onPress={goPrev}
             disabled={exerciseIndex === 0}
             className="flex-row items-center gap-1 px-4 py-3 rounded-full border border-white/20"
@@ -223,11 +224,11 @@ export default function GuidedWorkoutPlayer({
           >
             <ChevronLeft size={16} color="white" />
             <Text className="text-white text-sm font-medium">Prev</Text>
-          </Pressable>
-          <Pressable onPress={goNext} className="flex-1 flex-row items-center justify-center gap-1 px-4 py-3 rounded-full bg-cyan-600">
+          </PressableScale>
+          <PressableScale onPress={goNext} className="flex-1 flex-row items-center justify-center gap-1 px-4 py-3 rounded-full bg-cyan-600">
             <Text className="text-white text-sm font-semibold">{isLast ? 'Finish Workout' : 'Next Exercise'}</Text>
             <ChevronRight size={16} color="white" />
-          </Pressable>
+          </PressableScale>
         </View>
       </View>
     </Modal>
@@ -285,15 +286,15 @@ function FinishScreen({
           />
         </View>
         <View className="w-full max-w-xs flex-row gap-2">
-          <Pressable onPress={onBack} className="flex-1 py-3 rounded-full border border-white/20 items-center">
+          <PressableScale onPress={onBack} className="flex-1 py-3 rounded-full border border-white/20 items-center">
             <Text className="text-white text-sm font-medium">Back</Text>
-          </Pressable>
-          <Pressable
+          </PressableScale>
+          <PressableScale hapticStyle="success"
             onPress={() => onSave(caloriesBurned === '' ? undefined : Number(caloriesBurned), notes || undefined)}
             className="flex-1 py-3 rounded-full bg-cyan-600 items-center"
           >
             <Text className="text-white text-sm font-semibold">Save</Text>
-          </Pressable>
+          </PressableScale>
         </View>
       </View>
     </Modal>

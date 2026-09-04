@@ -1,8 +1,9 @@
 import { useRef } from 'react';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { X } from 'lucide-react-native';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { colors } from '@fittrack/shared';
+import PressableScale from '@/components/ui/pressable-scale';
 
 export default function BarcodeScannerModal({
   onDetected,
@@ -34,18 +35,18 @@ export default function BarcodeScannerModal({
         <Text className="text-sm text-center" style={{ color: colors.textSecondary }}>
           FitTrack needs camera access to scan barcodes.
         </Text>
-        <Pressable
+        <PressableScale
           onPress={requestPermission}
           className="px-4 py-2.5 rounded-full"
           style={{ backgroundColor: colors.brandPrimaryDark }}
         >
           <Text className="text-white text-sm font-semibold">Grant camera access</Text>
-        </Pressable>
-        <Pressable onPress={onClose}>
+        </PressableScale>
+        <PressableScale onPress={onClose}>
           <Text className="text-sm" style={{ color: colors.textMuted }}>
             Cancel
           </Text>
-        </Pressable>
+        </PressableScale>
       </View>
     );
   }
@@ -56,9 +57,9 @@ export default function BarcodeScannerModal({
         <Text className="font-semibold" style={{ color: colors.textPrimary }}>
           Scan Barcode
         </Text>
-        <Pressable onPress={onClose} className="p-1">
+        <PressableScale onPress={onClose} className="p-1">
           <X size={18} color={colors.textPrimary} />
-        </Pressable>
+        </PressableScale>
       </View>
       <View className="rounded-xl overflow-hidden bg-black" style={{ height: 280 }}>
         <CameraView

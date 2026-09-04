@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Clock, Minus, Plus, PlayCircle, Trash2, X, Zap } from 'lucide-react-native';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import type { Exercise, ExerciseLogEntry, ScheduledWorkout, UnitSystem, Weekday } from '@fittrack/shared';
@@ -11,6 +11,7 @@ import RestDayBanner from '@/components/rest-day-banner';
 import ExerciseVideoModal from '@/components/exercise-video-modal';
 import GuidedWorkoutPlayer from '@/components/guided-workout-player';
 import TextField from '@/components/ui/text-field';
+import PressableScale from '@/components/ui/pressable-scale';
 
 const WEEKDAYS: Weekday[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -62,7 +63,7 @@ export default function WorkoutsScreen() {
             const w = workoutForDay(day);
             const isToday = todayLabel === day;
             return (
-              <Pressable
+              <PressableScale hapticStyle="selection"
                 key={day}
                 onPress={() => setActiveDay(day)}
                 className="rounded-2xl border p-3"
@@ -88,7 +89,7 @@ export default function WorkoutsScreen() {
                     {w.exercises.length} exercises
                   </Text>
                 )}
-              </Pressable>
+              </PressableScale>
             );
           })}
         </View>
@@ -122,9 +123,9 @@ export default function WorkoutsScreen() {
                       </Text>
                     </View>
                   </View>
-                  <Pressable onPress={() => removeWorkoutLog(log.id)} className="p-1.5">
+                  <PressableScale hapticStyle="warning" onPress={() => removeWorkoutLog(log.id)} className="p-1.5">
                     <Trash2 size={15} color={colors.textMuted} />
-                  </Pressable>
+                  </PressableScale>
                 </View>
               ))}
             </View>
@@ -213,9 +214,9 @@ function DayDetailModal({
             <Text className="font-semibold flex-1 mr-2" style={{ color: colors.textPrimary }}>
               {day} — {workout?.name ?? 'Rest Day'}
             </Text>
-            <Pressable onPress={onClose} className="p-1">
+            <PressableScale onPress={onClose} className="p-1">
               <X size={18} color={colors.textPrimary} />
-            </Pressable>
+            </PressableScale>
           </View>
 
           {workout ? (
@@ -235,23 +236,23 @@ function DayDetailModal({
                         {ex.equipment} {ex.sets && ex.reps ? `· ${ex.sets} × ${ex.reps}` : ex.notes ? `· ${ex.notes}` : ''}
                       </Text>
                     </View>
-                    <Pressable onPress={() => setVideoExercise(ex)} className="flex-row items-center gap-1">
+                    <PressableScale onPress={() => setVideoExercise(ex)} className="flex-row items-center gap-1">
                       <PlayCircle size={16} color={colors.brandPrimary} />
                       <Text className="text-xs font-medium" style={{ color: colors.brandPrimary }}>
                         Demo
                       </Text>
-                    </Pressable>
+                    </PressableScale>
                   </View>
                 ))}
               </View>
               {videoExercise && <ExerciseVideoModal exercise={videoExercise} onClose={() => setVideoExercise(null)} />}
               <View className="flex-row gap-2">
-                <Pressable onPress={onEdit} className="py-2.5 px-4 rounded-lg border items-center" style={{ borderColor: colors.gridline }}>
+                <PressableScale onPress={onEdit} className="py-2.5 px-4 rounded-lg border items-center" style={{ borderColor: colors.gridline }}>
                   <Text className="text-sm font-medium" style={{ color: colors.textPrimary }}>
                     Edit
                   </Text>
-                </Pressable>
-                <Pressable
+                </PressableScale>
+                <PressableScale hapticStyle="success"
                   onPress={() => onLog(workout)}
                   className="flex-1 py-2.5 rounded-full border items-center"
                   style={{ borderColor: colors.brandPrimaryDark }}
@@ -259,15 +260,15 @@ function DayDetailModal({
                   <Text className="text-sm font-semibold" style={{ color: colors.brandPrimary }}>
                     Log as done
                   </Text>
-                </Pressable>
-                <Pressable
+                </PressableScale>
+                <PressableScale
                   onPress={() => onPlay(workout)}
                   className="flex-1 flex-row items-center justify-center gap-1.5 py-2.5 rounded-full"
                   style={{ backgroundColor: colors.brandPrimaryDark }}
                 >
                   <Zap size={15} color="white" />
                   <Text className="text-white text-sm font-semibold">Start Workout</Text>
-                </Pressable>
+                </PressableScale>
               </View>
             </>
           ) : (
@@ -275,10 +276,10 @@ function DayDetailModal({
               <Text className="text-sm mb-4" style={{ color: colors.textMuted }}>
                 No workout scheduled for this day.
               </Text>
-              <Pressable onPress={onEdit} className="flex-row items-center gap-1.5 py-2.5 px-4 rounded-full" style={{ backgroundColor: colors.brandPrimaryDark }}>
+              <PressableScale onPress={onEdit} className="flex-row items-center gap-1.5 py-2.5 px-4 rounded-full" style={{ backgroundColor: colors.brandPrimaryDark }}>
                 <Plus size={16} color="white" />
                 <Text className="text-white text-sm font-semibold">Add a workout</Text>
-              </Pressable>
+              </PressableScale>
             </View>
           )}
         </ScrollView>
@@ -315,9 +316,9 @@ function EditDayModal({
             <Text className="font-semibold" style={{ color: colors.textPrimary }}>
               Edit {day}
             </Text>
-            <Pressable onPress={onClose} className="p-1">
+            <PressableScale onPress={onClose} className="p-1">
               <X size={18} color={colors.textPrimary} />
-            </Pressable>
+            </PressableScale>
           </View>
 
           <View className="mb-4">
@@ -337,7 +338,7 @@ function EditDayModal({
                   {EXERCISE_LIBRARY.filter((e) => e.category === cat).map((ex) => {
                     const isSelected = selected.includes(ex.id);
                     return (
-                      <Pressable
+                      <PressableScale hapticStyle="selection"
                         key={ex.id}
                         onPress={() => toggle(ex.id)}
                         className="px-2.5 py-1.5 rounded-full border"
@@ -349,7 +350,7 @@ function EditDayModal({
                         <Text className="text-xs" style={{ color: isSelected ? 'white' : colors.textSecondary }}>
                           {ex.name}
                         </Text>
-                      </Pressable>
+                      </PressableScale>
                     );
                   })}
                 </View>
@@ -358,14 +359,14 @@ function EditDayModal({
           </View>
 
           <View className="flex-row gap-2">
-            <Pressable onPress={onClose} className="flex-1 py-2.5 rounded-lg border items-center" style={{ borderColor: colors.gridline }}>
+            <PressableScale onPress={onClose} className="flex-1 py-2.5 rounded-lg border items-center" style={{ borderColor: colors.gridline }}>
               <Text className="text-sm font-medium" style={{ color: colors.textPrimary }}>
                 Cancel
               </Text>
-            </Pressable>
-            <Pressable onPress={() => onSave(name, selected)} className="flex-1 py-2.5 rounded-full items-center" style={{ backgroundColor: colors.brandPrimaryDark }}>
+            </PressableScale>
+            <PressableScale hapticStyle="success" onPress={() => onSave(name, selected)} className="flex-1 py-2.5 rounded-full items-center" style={{ backgroundColor: colors.brandPrimaryDark }}>
               <Text className="text-white text-sm font-semibold">Save</Text>
-            </Pressable>
+            </PressableScale>
           </View>
         </ScrollView>
       </View>
@@ -431,9 +432,9 @@ function LogWorkoutModal({
             <Text className="font-semibold" style={{ color: colors.textPrimary }}>
               Log: {workout.name}
             </Text>
-            <Pressable onPress={onClose} className="p-1">
+            <PressableScale onPress={onClose} className="p-1">
               <X size={18} color={colors.textPrimary} />
-            </Pressable>
+            </PressableScale>
           </View>
 
           <View className="flex-row gap-3 mb-4">
@@ -463,12 +464,12 @@ function LogWorkoutModal({
                     <Text className="text-sm font-medium" style={{ color: colors.textPrimary }}>
                       {ex.name}
                     </Text>
-                    <Pressable onPress={() => addSet(ex)} className="flex-row items-center gap-1">
+                    <PressableScale onPress={() => addSet(ex)} className="flex-row items-center gap-1">
                       <Plus size={13} color={colors.brandPrimary} />
                       <Text className="text-xs font-medium" style={{ color: colors.brandPrimary }}>
                         Add set
                       </Text>
-                    </Pressable>
+                    </PressableScale>
                   </View>
                   {sets.length > 0 && (
                     <View className="gap-1.5">
@@ -497,9 +498,9 @@ function LogWorkoutModal({
                           <Text className="text-xs" style={{ color: colors.textMuted }}>
                             reps
                           </Text>
-                          <Pressable onPress={() => removeSet(ex.id, idx)} className="ml-auto p-1">
+                          <PressableScale hapticStyle="warning" onPress={() => removeSet(ex.id, idx)} className="ml-auto p-1">
                             <Minus size={14} color={colors.textMuted} />
-                          </Pressable>
+                          </PressableScale>
                         </View>
                       ))}
                     </View>
@@ -517,14 +518,14 @@ function LogWorkoutModal({
           </View>
 
           <View className="flex-row gap-2">
-            <Pressable onPress={onClose} className="flex-1 py-2.5 rounded-lg border items-center" style={{ borderColor: colors.gridline }}>
+            <PressableScale onPress={onClose} className="flex-1 py-2.5 rounded-lg border items-center" style={{ borderColor: colors.gridline }}>
               <Text className="text-sm font-medium" style={{ color: colors.textPrimary }}>
                 Cancel
               </Text>
-            </Pressable>
-            <Pressable onPress={save} className="flex-1 py-2.5 rounded-full items-center" style={{ backgroundColor: colors.brandPrimaryDark }}>
+            </PressableScale>
+            <PressableScale hapticStyle="success" onPress={save} className="flex-1 py-2.5 rounded-full items-center" style={{ backgroundColor: colors.brandPrimaryDark }}>
               <Text className="text-white text-sm font-semibold">Save</Text>
-            </Pressable>
+            </PressableScale>
           </View>
         </ScrollView>
       </View>

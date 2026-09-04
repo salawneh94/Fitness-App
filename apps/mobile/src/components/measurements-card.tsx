@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useAppStore } from '@/store/useAppStore';
 import type { BodyMeasurementEntry, MeasurementKey, UnitSystem } from '@fittrack/shared';
 import { colors, displayLength, lengthUnitLabel } from '@fittrack/shared';
 import Card from './ui/card';
 import LengthInput from './ui/length-input';
 import LineTrendChart from './charts/line-trend-chart';
+import PressableScale from '@/components/ui/pressable-scale';
 
 const FIELDS: { key: MeasurementKey; label: string }[] = [
   { key: 'waistCm', label: 'Waist' },
@@ -55,15 +56,15 @@ export default function MeasurementsCard({ unit }: { unit: UnitSystem }) {
           </View>
         ))}
       </View>
-      <Pressable onPress={save} className="self-start px-4 py-2 rounded-full mb-4" style={{ backgroundColor: colors.brandPrimaryDark }}>
+      <PressableScale hapticStyle="success" onPress={save} className="self-start px-4 py-2 rounded-full mb-4" style={{ backgroundColor: colors.brandPrimaryDark }}>
         <Text className="text-white text-sm font-semibold">Save</Text>
-      </Pressable>
+      </PressableScale>
 
       <View className="flex-row flex-wrap gap-1.5 mb-3">
         {FIELDS.map(({ key, label }) => {
           const isSelected = selected === key;
           return (
-            <Pressable
+            <PressableScale hapticStyle="selection"
               key={key}
               onPress={() => setSelected(key)}
               className="px-2.5 py-1.5 rounded-full border"
@@ -75,7 +76,7 @@ export default function MeasurementsCard({ unit }: { unit: UnitSystem }) {
               <Text className="text-xs" style={{ color: isSelected ? 'white' : colors.textSecondary }}>
                 {label}
               </Text>
-            </Pressable>
+            </PressableScale>
           );
         })}
       </View>

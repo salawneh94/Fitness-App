@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Plus, Trash2, Utensils } from 'lucide-react-native';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useAppStore } from '@/store/useAppStore';
 import type { MealType } from '@fittrack/shared';
 import { colors } from '@fittrack/shared';
 import Card from './ui/card';
 import SavedMealBuilderModal from './saved-meal-builder-modal';
+import PressableScale from '@/components/ui/pressable-scale';
 
 const MEAL_CHIPS: { key: MealType; label: string }[] = [
   { key: 'breakfast', label: 'B' },
@@ -24,12 +25,12 @@ export default function SavedMealsSection() {
     <Card
       title="Saved Meals"
       action={
-        <Pressable onPress={() => setBuilding(true)} className="flex-row items-center gap-1.5">
+        <PressableScale onPress={() => setBuilding(true)} className="flex-row items-center gap-1.5">
           <Plus size={15} color={colors.brandPrimary} />
           <Text className="text-sm font-medium" style={{ color: colors.brandPrimary }}>
             New
           </Text>
-        </Pressable>
+        </PressableScale>
       }
     >
       {savedMeals.length === 0 ? (
@@ -59,7 +60,7 @@ export default function SavedMealsSection() {
                 </View>
                 <View className="flex-row items-center gap-1">
                   {MEAL_CHIPS.map((c) => (
-                    <Pressable
+                    <PressableScale hapticStyle="success"
                       key={c.key}
                       onPress={() => logSavedMeal(meal.id, c.key)}
                       className="w-7 h-7 rounded-full items-center justify-center border"
@@ -68,11 +69,11 @@ export default function SavedMealsSection() {
                       <Text className="text-xs font-semibold" style={{ color: colors.textSecondary }}>
                         {c.label}
                       </Text>
-                    </Pressable>
+                    </PressableScale>
                   ))}
-                  <Pressable onPress={() => removeSavedMeal(meal.id)} className="p-1.5">
+                  <PressableScale hapticStyle="warning" onPress={() => removeSavedMeal(meal.id)} className="p-1.5">
                     <Trash2 size={15} color={colors.textMuted} />
-                  </Pressable>
+                  </PressableScale>
                 </View>
               </View>
             );

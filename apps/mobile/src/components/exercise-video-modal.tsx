@@ -1,8 +1,9 @@
 import { ExternalLink, X } from 'lucide-react-native';
-import { Linking, Modal, Pressable, Text, View } from 'react-native';
+import { Linking, Modal, Text, View } from 'react-native';
 import WebView from 'react-native-webview';
 import type { Exercise } from '@fittrack/shared';
 import { colors } from '@fittrack/shared';
+import PressableScale from '@/components/ui/pressable-scale';
 
 export default function ExerciseVideoModal({ exercise, onClose }: { exercise: Exercise; onClose: () => void }) {
   return (
@@ -18,9 +19,9 @@ export default function ExerciseVideoModal({ exercise, onClose }: { exercise: Ex
                 {exercise.equipment} {exercise.sets && exercise.reps ? `· ${exercise.sets} × ${exercise.reps}` : exercise.notes ? `· ${exercise.notes}` : ''}
               </Text>
             </View>
-            <Pressable onPress={onClose} className="p-1">
+            <PressableScale onPress={onClose} className="p-1">
               <X size={18} color={colors.textPrimary} />
-            </Pressable>
+            </PressableScale>
           </View>
 
           {exercise.videoId ? (
@@ -39,7 +40,7 @@ export default function ExerciseVideoModal({ exercise, onClose }: { exercise: Ex
             </View>
           )}
 
-          <Pressable
+          <PressableScale
             onPress={() => exercise.videoUrl && Linking.openURL(exercise.videoUrl)}
             className="flex-row items-center justify-center gap-1.5 mt-3 py-2"
           >
@@ -47,7 +48,7 @@ export default function ExerciseVideoModal({ exercise, onClose }: { exercise: Ex
             <Text className="text-sm" style={{ color: colors.brandPrimary }}>
               {exercise.videoId ? 'More videos on YouTube' : 'Search YouTube'}
             </Text>
-          </Pressable>
+          </PressableScale>
         </View>
       </View>
     </Modal>

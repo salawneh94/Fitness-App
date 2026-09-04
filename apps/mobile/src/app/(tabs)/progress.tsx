@@ -3,7 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { randomUUID } from 'expo-crypto';
 import { Image } from 'expo-image';
 import { Award, CalendarCheck, Camera, Flame, Plus, Trash2 } from 'lucide-react-native';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import {
@@ -27,6 +27,7 @@ import CalorieTrendChart from '@/components/charts/calorie-trend-chart';
 import MeasurementsCard from '@/components/measurements-card';
 import PhotoCompareSlider from '@/components/photo-compare-slider';
 import { deletePhotoFile, getPhotoUri, savePhotoFromUri } from '@/lib/photo-store';
+import PressableScale from '@/components/ui/pressable-scale';
 
 export default function ProgressScreen() {
   const profile = useAppStore((s) => s.profile)!; // gated by root layout
@@ -155,7 +156,7 @@ export default function ProgressScreen() {
                 {exerciseOptions.map((ex) => {
                   const isSelected = activeExercise === ex.id;
                   return (
-                    <Pressable
+                    <PressableScale hapticStyle="selection"
                       key={ex.id}
                       onPress={() => setSelectedExercise(ex.id)}
                       className="px-2.5 py-1.5 rounded-full border"
@@ -167,7 +168,7 @@ export default function ProgressScreen() {
                       <Text className="text-xs" style={{ color: isSelected ? 'white' : colors.textSecondary }}>
                         {ex.name}
                       </Text>
-                    </Pressable>
+                    </PressableScale>
                   );
                 })}
               </View>
@@ -223,16 +224,16 @@ function PhotosCard({
     <Card
       title="Progress Photos"
       action={
-        <Pressable onPress={handleAdd} disabled={busy} className="flex-row items-center gap-1.5">
+        <PressableScale hapticStyle="success" onPress={handleAdd} disabled={busy} className="flex-row items-center gap-1.5">
           <Camera size={15} color={colors.brandPrimary} />
           <Text className="text-sm font-medium" style={{ color: colors.brandPrimary }}>
             Add photo
           </Text>
-        </Pressable>
+        </PressableScale>
       }
     >
       {sorted.length === 0 ? (
-        <Pressable
+        <PressableScale hapticStyle="success"
           onPress={handleAdd}
           disabled={busy}
           className="items-center gap-2 py-8 rounded-xl border-2 border-dashed"
@@ -242,13 +243,13 @@ function PhotosCard({
           <Text className="text-sm" style={{ color: colors.textMuted }}>
             Take or upload your first progress photo
           </Text>
-        </Pressable>
+        </PressableScale>
       ) : (
         <View className="flex-row flex-wrap gap-2">
           {sorted.map((p) => {
             const uri = getPhotoUri(p.id);
             return (
-              <Pressable
+              <PressableScale
                 key={p.id}
                 onPress={() => setViewing(p.id)}
                 className="rounded-lg overflow-hidden"
@@ -263,7 +264,7 @@ function PhotosCard({
                     {new Date(p.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </Text>
                 </View>
-              </Pressable>
+              </PressableScale>
             );
           })}
         </View>
@@ -289,7 +290,7 @@ function PhotosCard({
                   })}
                 </Text>
                 <View className="flex-row gap-2">
-                  <Pressable
+                  <PressableScale hapticStyle="warning"
                     onPress={() => handleRemove(viewing)}
                     className="flex-row items-center gap-1 px-3 py-1.5 rounded-lg"
                     style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
@@ -298,14 +299,14 @@ function PhotosCard({
                     <Text className="text-sm" style={{ color: colors.statusCritical }}>
                       Delete
                     </Text>
-                  </Pressable>
-                  <Pressable
+                  </PressableScale>
+                  <PressableScale
                     onPress={() => setViewing(null)}
                     className="px-3 py-1.5 rounded-lg"
                     style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
                   >
                     <Text className="text-white text-sm">Close</Text>
-                  </Pressable>
+                  </PressableScale>
                 </View>
               </View>
             </View>

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@fittrack/shared';
 import { useAuthStore } from '@/store/useAuthStore';
 import TextField from './ui/text-field';
+import PressableScale from '@/components/ui/pressable-scale';
 
 type Mode = 'signIn' | 'signUp';
 
@@ -47,7 +48,7 @@ export default function AuthScreen() {
         <Text className="text-sm text-center mb-8" style={{ color: colors.textSecondary }}>
           We sent a confirmation link to {email.trim()}. Tap it, then come back and sign in.
         </Text>
-        <Pressable
+        <PressableScale
           onPress={() => {
             setConfirmationSent(false);
             setMode('signIn');
@@ -57,7 +58,7 @@ export default function AuthScreen() {
           style={{ backgroundColor: colors.brandPrimaryDark }}
         >
           <Text className="text-white text-sm font-semibold">Back to sign in</Text>
-        </Pressable>
+        </PressableScale>
       </SafeAreaView>
     );
   }
@@ -106,7 +107,7 @@ export default function AuthScreen() {
             </Text>
           )}
 
-          <Pressable
+          <PressableScale hapticStyle="success"
             onPress={submit}
             disabled={!canSubmit}
             className="items-center py-3.5 rounded-full mt-2"
@@ -115,9 +116,9 @@ export default function AuthScreen() {
             <Text className="text-white text-sm font-semibold">
               {loading ? 'Please wait…' : mode === 'signIn' ? 'Sign In' : 'Sign Up'}
             </Text>
-          </Pressable>
+          </PressableScale>
 
-          <Pressable
+          <PressableScale
             onPress={() => {
               setMode((m) => (m === 'signIn' ? 'signUp' : 'signIn'));
               setError(null);
@@ -130,7 +131,7 @@ export default function AuthScreen() {
                 {mode === 'signIn' ? 'Sign up' : 'Sign in'}
               </Text>
             </Text>
-          </Pressable>
+          </PressableScale>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

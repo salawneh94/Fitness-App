@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { CheckCircle2, Loader2 } from 'lucide-react-native';
-import { Linking, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Linking, Platform, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@fittrack/shared';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useEntitlementStore } from '@/store/useEntitlementStore';
+import PressableScale from '@/components/ui/pressable-scale';
 
 // Apple's standard EULA — used as-is since this app doesn't have custom subscription terms
 // beyond what StoreKit/Play Billing already enforce.
@@ -101,7 +102,7 @@ export default function PaywallScreen() {
             </Text>
           )}
 
-          <Pressable
+          <PressableScale hapticStyle="success"
             onPress={handlePurchase}
             disabled={!pkg || busy}
             className="items-center py-3.5 rounded-full mb-3 flex-row justify-center gap-2"
@@ -111,32 +112,32 @@ export default function PaywallScreen() {
             <Text className="text-white text-sm font-semibold">
               {hasFreeTrial ? 'Start Free Trial' : 'Subscribe'}
             </Text>
-          </Pressable>
+          </PressableScale>
 
-          <Pressable onPress={handleRestore} disabled={busy} className="items-center py-2.5">
+          <PressableScale onPress={handleRestore} disabled={busy} className="items-center py-2.5">
             <Text className="text-sm" style={{ color: colors.textSecondary }}>
               Restore Purchases
             </Text>
-          </Pressable>
+          </PressableScale>
 
           <View className="flex-row justify-center gap-4 mt-2">
-            <Pressable onPress={() => Linking.openURL(TERMS_URL)}>
+            <PressableScale onPress={() => Linking.openURL(TERMS_URL)}>
               <Text className="text-xs underline" style={{ color: colors.textMuted }}>
                 Terms of Use
               </Text>
-            </Pressable>
-            <Pressable onPress={() => Linking.openURL(PRIVACY_URL)}>
+            </PressableScale>
+            <PressableScale onPress={() => Linking.openURL(PRIVACY_URL)}>
               <Text className="text-xs underline" style={{ color: colors.textMuted }}>
                 Privacy Policy
               </Text>
-            </Pressable>
+            </PressableScale>
           </View>
 
-          <Pressable onPress={() => signOut()} className="items-center py-4 mt-2">
+          <PressableScale onPress={() => signOut()} className="items-center py-4 mt-2">
             <Text className="text-xs" style={{ color: colors.textMuted }}>
               Sign out
             </Text>
-          </Pressable>
+          </PressableScale>
         </View>
       </ScrollView>
     </SafeAreaView>

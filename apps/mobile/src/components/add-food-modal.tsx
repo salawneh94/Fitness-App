@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { X, ScanBarcode, PenLine, Loader2, CircleCheck, Utensils } from 'lucide-react-native';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, ScrollView, Text, View } from 'react-native';
 import { useAppStore } from '@/store/useAppStore';
 import type { FoodEntry, MealType } from '@fittrack/shared';
 import { todayISO, colors } from '@fittrack/shared';
 import { lookupBarcode, type ScannedProduct } from '@/lib/food-api';
 import BarcodeScannerModal from './barcode-scanner-modal';
 import TextField from './ui/text-field';
+import PressableScale from '@/components/ui/pressable-scale';
 
 type Mode = 'choose' | 'scan' | 'manual' | 'confirmScanned' | 'savedMeals';
 
@@ -20,7 +21,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 
 function ChoiceRow({ icon: Icon, title, sub, onPress }: { icon: typeof ScanBarcode; title: string; sub: string; onPress: () => void }) {
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       className="flex-row items-center gap-3 p-4 rounded-xl border"
       style={{ borderColor: colors.gridline }}
@@ -34,7 +35,7 @@ function ChoiceRow({ icon: Icon, title, sub, onPress }: { icon: typeof ScanBarco
           {sub}
         </Text>
       </View>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -130,9 +131,9 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
             <Text className="font-semibold capitalize" style={{ color: colors.textPrimary }}>
               Add to {meal}
             </Text>
-            <Pressable onPress={onClose} className="p-1">
+            <PressableScale onPress={onClose} className="p-1">
               <X size={18} color={colors.textPrimary} />
-            </Pressable>
+            </PressableScale>
           </View>
 
           {loading && (
@@ -172,7 +173,7 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
               {savedMeals.map((m) => {
                 const totalCals = m.items.reduce((s, i) => s + i.calories * i.quantity, 0);
                 return (
-                  <Pressable
+                  <PressableScale
                     key={m.id}
                     onPress={() => {
                       logSavedMeal(m.id, meal);
@@ -192,10 +193,10 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
                     <Text className="text-xs font-medium" style={{ color: colors.textMuted }}>
                       {Math.round(totalCals)} kcal
                     </Text>
-                  </Pressable>
+                  </PressableScale>
                 );
               })}
-              <Pressable
+              <PressableScale hapticStyle="selection"
                 onPress={() => setMode('choose')}
                 className="py-2.5 rounded-lg border items-center"
                 style={{ borderColor: colors.gridline }}
@@ -203,7 +204,7 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
                 <Text className="text-sm font-medium" style={{ color: colors.textPrimary }}>
                   Back
                 </Text>
-              </Pressable>
+              </PressableScale>
             </View>
           )}
 
@@ -246,7 +247,7 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
                 ))}
               </View>
               <View className="flex-row gap-2">
-                <Pressable
+                <PressableScale hapticStyle="selection"
                   onPress={() => setMode('choose')}
                   className="flex-1 py-2.5 rounded-lg border items-center"
                   style={{ borderColor: colors.gridline }}
@@ -254,10 +255,10 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
                   <Text className="text-sm font-medium" style={{ color: colors.textPrimary }}>
                     Back
                   </Text>
-                </Pressable>
-                <Pressable onPress={confirmScanned} className="flex-1 py-2.5 rounded-full items-center" style={{ backgroundColor: colors.brandPrimaryDark }}>
+                </PressableScale>
+                <PressableScale hapticStyle="success" onPress={confirmScanned} className="flex-1 py-2.5 rounded-full items-center" style={{ backgroundColor: colors.brandPrimaryDark }}>
                   <Text className="text-white text-sm font-semibold">Add to log</Text>
-                </Pressable>
+                </PressableScale>
               </View>
             </View>
           )}
@@ -304,7 +305,7 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
                 </View>
               </View>
               <View className="flex-row gap-2 pt-1">
-                <Pressable
+                <PressableScale hapticStyle="selection"
                   onPress={() => setMode('choose')}
                   className="flex-1 py-2.5 rounded-lg border items-center"
                   style={{ borderColor: colors.gridline }}
@@ -312,10 +313,10 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
                   <Text className="text-sm font-medium" style={{ color: colors.textPrimary }}>
                     Back
                   </Text>
-                </Pressable>
-                <Pressable onPress={submitManual} className="flex-1 py-2.5 rounded-full items-center" style={{ backgroundColor: colors.brandPrimaryDark }}>
+                </PressableScale>
+                <PressableScale hapticStyle="success" onPress={submitManual} className="flex-1 py-2.5 rounded-full items-center" style={{ backgroundColor: colors.brandPrimaryDark }}>
                   <Text className="text-white text-sm font-semibold">Add to log</Text>
-                </Pressable>
+                </PressableScale>
               </View>
             </View>
           )}

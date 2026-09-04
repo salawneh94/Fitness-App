@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'expo-router';
 import { Flame, Clock, Target, TrendingUp, Pencil, Zap } from 'lucide-react-native';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import { calcDailyTargets, GOAL_LABELS, todayISO } from '@fittrack/shared';
@@ -19,6 +19,7 @@ import QuickLogCard from '@/components/quick-log-card';
 import MotivationalTagline from '@/components/motivational-tagline';
 import Confetti from '@/components/confetti';
 import { useStreakCelebration } from '@/hooks/use-streak-celebration';
+import PressableScale from '@/components/ui/pressable-scale';
 
 export default function OverviewScreen() {
   const profile = useAppStore((s) => s.profile)!; // gated by root layout
@@ -131,13 +132,13 @@ export default function OverviewScreen() {
               </View>
             </View>
             <Link href="/profile" asChild>
-              <Pressable
+              <PressableScale
                 className="flex-row items-center gap-1.5 px-3.5 py-2 rounded-full"
                 style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
               >
                 <Pencil size={14} color="#fff" />
                 <Text className="text-white text-sm">Edit Profile</Text>
-              </Pressable>
+              </PressableScale>
             </Link>
           </View>
         </View>
@@ -247,7 +248,7 @@ export default function OverviewScreen() {
         </Card>
 
         <Link href="/progress" asChild>
-          <Pressable
+          <PressableScale
             className="flex-row items-center justify-between p-4 rounded-2xl border"
             style={{ backgroundColor: colors.chartSurface, borderColor: colors.gridline }}
           >
@@ -257,7 +258,7 @@ export default function OverviewScreen() {
             <Text className="text-sm font-medium" style={{ color: colors.brandPrimary }}>
               Progress →
             </Text>
-          </Pressable>
+          </PressableScale>
         </Link>
       </ScrollView>
     </SafeAreaView>

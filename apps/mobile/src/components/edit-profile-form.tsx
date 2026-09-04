@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { LogOut, Trash2 } from 'lucide-react-native';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -15,6 +15,7 @@ import HeightInput from './ui/height-input';
 import UnitToggle from './ui/unit-toggle';
 import TextField from './ui/text-field';
 import SelectField from './ui/select-field';
+import PressableScale from '@/components/ui/pressable-scale';
 
 const GOALS: Goal[] = ['lose_fat', 'build_muscle', 'maintain', 'improve_endurance', 'general_health'];
 const ACTIVITIES: ActivityLevel[] = ['sedentary', 'light', 'moderate', 'active', 'very_active'];
@@ -250,13 +251,13 @@ export default function EditProfileForm() {
             </Card>
           )}
 
-          <Pressable
+          <PressableScale hapticStyle="success"
             onPress={submit}
             className="w-full py-3.5 rounded-full items-center"
             style={{ backgroundColor: colors.brandPrimaryDark }}
           >
             <Text className="text-white font-semibold">Save Changes</Text>
-          </Pressable>
+          </PressableScale>
 
           <Card title="Account">
             {authEmail && (
@@ -264,7 +265,7 @@ export default function EditProfileForm() {
                 Signed in as {authEmail}
               </Text>
             )}
-            <Pressable
+            <PressableScale
               onPress={() =>
                 Alert.alert('Sign out', 'You can sign back in any time to pick up where you left off.', [
                   { text: 'Cancel', style: 'cancel' },
@@ -278,9 +279,9 @@ export default function EditProfileForm() {
               <Text className="text-sm font-medium" style={{ color: colors.statusCritical }}>
                 Sign out
               </Text>
-            </Pressable>
+            </PressableScale>
 
-            <Pressable
+            <PressableScale hapticStyle="warning"
               onPress={confirmDeleteAccount}
               disabled={deleting}
               className="flex-row items-center justify-center gap-2 py-2.5 rounded-lg border mt-2"
@@ -294,7 +295,7 @@ export default function EditProfileForm() {
               <Text className="text-sm font-medium" style={{ color: colors.statusCritical }}>
                 {deleting ? 'Deleting…' : 'Delete Account'}
               </Text>
-            </Pressable>
+            </PressableScale>
           </Card>
         </View>
       </ScrollView>

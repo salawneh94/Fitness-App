@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft, Minus, Plus, Check } from 'lucide-react-native';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import type { ActivityLevel, Goal, Profile, Sex, UnitSystem } from '@fittrack/shared';
@@ -10,6 +10,7 @@ import WeightInput from './ui/weight-input';
 import HeightInput from './ui/height-input';
 import UnitToggle from './ui/unit-toggle';
 import TextField from './ui/text-field';
+import PressableScale from '@/components/ui/pressable-scale';
 
 const GOALS: Goal[] = ['lose_fat', 'build_muscle', 'maintain', 'improve_endurance', 'general_health'];
 const ACTIVITIES: ActivityLevel[] = ['sedentary', 'light', 'moderate', 'active', 'very_active'];
@@ -72,14 +73,14 @@ export default function OnboardingWizard() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       <View className="flex-1 px-6 py-4 max-w-md w-full self-center">
         <View className="flex-row items-center justify-between mb-6">
-          <Pressable
+          <PressableScale hapticStyle="selection"
             onPress={() => setStep((s) => Math.max(0, s - 1))}
             className="p-2 -ml-2"
             style={{ opacity: step === 0 ? 0 : 1 }}
             disabled={step === 0}
           >
             <ArrowLeft size={20} color={colors.textPrimary} />
-          </Pressable>
+          </PressableScale>
           <View className="flex-row gap-1.5">
             {Array.from({ length: STEP_COUNT }).map((_, i) => (
               <View
@@ -129,14 +130,14 @@ export default function OnboardingWizard() {
           {step === 7 && <StepReview form={form} />}
         </ScrollView>
 
-        <Pressable
+        <PressableScale
           onPress={() => (step === STEP_COUNT - 1 ? finish() : setStep((s) => s + 1))}
           disabled={!canProceed}
           className="w-full py-3.5 rounded-full mt-6 items-center"
           style={{ backgroundColor: colors.brandPrimaryDark, opacity: canProceed ? 1 : 0.4 }}
         >
           <Text className="text-white font-semibold">{step === STEP_COUNT - 1 ? 'Start Tracking' : 'Continue'}</Text>
-        </Pressable>
+        </PressableScale>
       </View>
     </SafeAreaView>
   );
@@ -157,7 +158,7 @@ function StepHeader({ title, sub }: { title: string; sub: string }) {
 
 function OptionButton({ selected, onPress, children }: { selected: boolean; onPress: () => void; children: React.ReactNode }) {
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       className="w-full flex-row items-center justify-between px-5 py-4 rounded-2xl border-2"
       style={{
@@ -166,7 +167,7 @@ function OptionButton({ selected, onPress, children }: { selected: boolean; onPr
       }}
     >
       {children}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -206,23 +207,23 @@ function StepAge({ value, onChange }: { value: number; onChange: (v: number) => 
     <View>
       <StepHeader title="How old are you?" sub="This helps us create your personalized plan." />
       <View className="flex-row items-center justify-center gap-6">
-        <Pressable
+        <PressableScale hapticStyle="selection"
           onPress={() => onChange(Math.max(13, value - 1))}
           className="w-11 h-11 rounded-full border items-center justify-center"
           style={{ borderColor: colors.gridline }}
         >
           <Minus size={18} color={colors.textPrimary} />
-        </Pressable>
+        </PressableScale>
         <Text className="text-5xl font-bold w-24 text-center" style={{ color: colors.textPrimary }}>
           {value}
         </Text>
-        <Pressable
+        <PressableScale hapticStyle="selection"
           onPress={() => onChange(Math.min(100, value + 1))}
           className="w-11 h-11 rounded-full border items-center justify-center"
           style={{ borderColor: colors.gridline }}
         >
           <Plus size={18} color={colors.textPrimary} />
-        </Pressable>
+        </PressableScale>
       </View>
     </View>
   );
