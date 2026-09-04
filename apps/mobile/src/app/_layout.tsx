@@ -45,7 +45,9 @@ export default function RootLayout() {
     if (!ready || !userId) return;
     if (lastPulledFor.current !== userId) {
       lastPulledFor.current = userId;
-      void pullRemote(userId);
+      // Full reconcile on sign-in/cold start: the only pass that can notice rows deleted on
+      // another device.
+      void pullRemote(userId, { full: true });
       // Ties RevenueCat's identity to the Supabase user id, so the webhook can join purchase
       // events back to the right account regardless of which device made the purchase.
       void useEntitlementStore.getState().logInAndRefresh(userId);
@@ -54,6 +56,8 @@ export default function RootLayout() {
 
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
+        // Foregrounding pulls only what changed since the last watermark, so coming back to the
+        // app costs one small delta instead of re-downloading the whole history.
         void pullRemote(userId);
         void useSyncQueue.getState().flush();
       }

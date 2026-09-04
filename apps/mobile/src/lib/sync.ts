@@ -10,6 +10,7 @@ import type {
   WeightEntry,
   WorkoutLogEntry,
 } from '@fittrack/shared';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 import { useSyncQueue, type SyncOp, type SyncTable } from './sync-queue';
 import { deletePhotoFromStorage, downloadPhotoFromStorage, hasPhotoFile, uploadPhotoToStorage } from './photo-store';
@@ -322,47 +323,136 @@ export const push = {
   syncProgressPhotoFile,
 };
 
+const WATERMARK_KEY = 'fittrack-sync-watermark';
+
+/** Highest server-side `updated_at` this device has already pulled, per user. Server-generated
+ * values are used rather than the device clock so skew can't cause rows to be skipped. */
+async function readWatermark(userId: string): Promise<string | null> {
+  const raw = await AsyncStorage.getItem(WATERMARK_KEY);
+  if (!raw) return null;
+  try {
+    return (JSON.parse(raw) as Record<string, string>)[userId] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeWatermark(userId: string, value: string): Promise<void> {
+  const raw = await AsyncStorage.getItem(WATERMARK_KEY);
+  let map: Record<string, string> = {};
+  try {
+    if (raw) map = JSON.parse(raw) as Record<string, string>;
+  } catch {
+    map = {};
+  }
+  map[userId] = value;
+  await AsyncStorage.setItem(WATERMARK_KEY, JSON.stringify(map));
+}
+
+function maxUpdatedAt(rowSets: { updated_at?: string }[][], previous: string | null): string | null {
+  let max = previous;
+  for (const rows of rowSets) {
+    for (const row of rows) {
+      if (row.updated_at && (!max || row.updated_at > max)) max = row.updated_at;
+    }
+  }
+  return max;
+}
+
+/** Applies incoming rows on top of what's already local, keyed by `keyOf`. Unlike
+ * mergeCollection this never drops a local row just because it wasn't in the response — a delta
+ * response only contains what changed, so absence means "unchanged", not "deleted". */
+function applyDelta<T>(table: SyncTable, keyOf: (item: T) => string, incoming: T[], local: T[]): T[] {
+  const pendingUpsert = pendingKeysForTable(table, 'upsert');
+  const pendingDelete = pendingKeysForTable(table, 'delete');
+  const byKey = new Map(local.map((item) => [keyOf(item), item]));
+  for (const row of incoming) {
+    const key = keyOf(row);
+    // A row this device is still pushing (or deleting) stays as the local copy — push wins its
+    // own race with pull, same rule mergeCollection follows.
+    if (pendingUpsert.has(key) || pendingDelete.has(key)) continue;
+    byKey.set(key, row);
+  }
+  return [...byKey.values()];
+}
+
 /**
- * Pulls every table for `userId` and merges it into the local store, called right after sign-in
- * and whenever the app returns to the foreground while signed in. Never overwrites a row this
- * device has an unconfirmed local write for (see mergeCollection above) — push always wins its
- * own race with pull.
+ * Syncs remote data into the local store.
+ *
+ * `full` (sign-in and cold start) fetches every row and lets the server's set win, which is what
+ * makes deletes from another device disappear here too. Foreground refreshes instead pull only
+ * rows whose `updated_at` is newer than the last watermark, so returning to the app costs one
+ * small delta rather than re-downloading the user's entire history. The tradeoff is that a
+ * delete made on another device isn't reflected until the next full sync — acceptable for a
+ * single-user app, and the alternative (tombstone rows) buys little for the complexity.
+ *
+ * Either way a row this device hasn't finished pushing is never overwritten.
  */
-export async function pullRemote(userId: string): Promise<void> {
+export async function pullRemote(userId: string, { full = false }: { full?: boolean } = {}): Promise<void> {
+  const watermark = full ? null : await readWatermark(userId);
+
+  const scoped = (table: string) => {
+    const query = supabase.from(table).select('*').eq('user_id', userId);
+    return watermark ? query.gt('updated_at', watermark) : query;
+  };
+
+  const profileQuery = supabase.from('profiles').select('*').eq('id', userId);
+
   const [profileRes, weightRes, stepsRes, sleepRes, measurementsRes, foodRes, savedMealsRes, scheduledRes, workoutLogsRes, photosRes] =
     await Promise.all([
-      supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
-      supabase.from('weight_entries').select('*').eq('user_id', userId),
-      supabase.from('steps_entries').select('*').eq('user_id', userId),
-      supabase.from('sleep_entries').select('*').eq('user_id', userId),
-      supabase.from('body_measurements').select('*').eq('user_id', userId),
-      supabase.from('food_entries').select('*').eq('user_id', userId),
-      supabase.from('saved_meals').select('*').eq('user_id', userId),
-      supabase.from('scheduled_workouts').select('*').eq('user_id', userId),
-      supabase.from('workout_logs').select('*').eq('user_id', userId),
-      supabase.from('progress_photos').select('*').eq('user_id', userId),
+      (watermark ? profileQuery.gt('updated_at', watermark) : profileQuery).maybeSingle(),
+      scoped('weight_entries'),
+      scoped('steps_entries'),
+      scoped('sleep_entries'),
+      scoped('body_measurements'),
+      scoped('food_entries'),
+      scoped('saved_meals'),
+      scoped('scheduled_workouts'),
+      scoped('workout_logs'),
+      scoped('progress_photos'),
     ]);
 
   const current = useAppStore.getState();
   const hasPendingProfile = pendingKeysForTable('profiles').has(userId);
+  // On a delta pull an absent profile means "unchanged", not "no profile" — only a full pull can
+  // conclude the latter.
+  const keepLocalProfile = hasPendingProfile || (!profileRes.data && !full);
+  const merge = watermark ? applyDelta : mergeCollection;
 
   useAppStore.setState({
-    profile: hasPendingProfile || !profileRes.data ? current.profile : profileFromRow(profileRes.data),
-    weightHistory: mergeCollection('weight_entries', (e) => e.date, (weightRes.data ?? []).map((r) => ({ date: r.date, weightKg: Number(r.weight_kg) })), current.weightHistory),
-    stepsHistory: mergeCollection('steps_entries', (e) => e.date, (stepsRes.data ?? []).map((r) => ({ date: r.date, steps: r.steps })), current.stepsHistory),
-    sleepHistory: mergeCollection('sleep_entries', (e) => e.date, (sleepRes.data ?? []).map((r) => ({ date: r.date, hours: Number(r.hours) })), current.sleepHistory),
-    measurementsHistory: mergeCollection(
+    profile: keepLocalProfile ? current.profile : profileRes.data ? profileFromRow(profileRes.data) : null,
+    weightHistory: merge('weight_entries', (e) => e.date, (weightRes.data ?? []).map((r) => ({ date: r.date, weightKg: Number(r.weight_kg) })), current.weightHistory),
+    stepsHistory: merge('steps_entries', (e) => e.date, (stepsRes.data ?? []).map((r) => ({ date: r.date, steps: r.steps })), current.stepsHistory),
+    sleepHistory: merge('sleep_entries', (e) => e.date, (sleepRes.data ?? []).map((r) => ({ date: r.date, hours: Number(r.hours) })), current.sleepHistory),
+    measurementsHistory: merge(
       'body_measurements',
       (e) => e.date,
       (measurementsRes.data ?? []).map(measurementFromRow),
       current.measurementsHistory
     ),
-    foodEntries: mergeCollection('food_entries', (e) => e.id, (foodRes.data ?? []).map(foodEntryFromRow), current.foodEntries),
-    savedMeals: mergeCollection('saved_meals', (e) => e.id, (savedMealsRes.data ?? []).map(savedMealFromRow), current.savedMeals),
-    scheduledWorkouts: mergeCollection('scheduled_workouts', (e) => e.day, (scheduledRes.data ?? []).map(scheduledWorkoutFromRow), current.scheduledWorkouts),
-    workoutLogs: mergeCollection('workout_logs', (e) => e.id, (workoutLogsRes.data ?? []).map(workoutLogFromRow), current.workoutLogs),
-    progressPhotos: mergeCollection('progress_photos', (e) => e.id, (photosRes.data ?? []).map(progressPhotoFromRow), current.progressPhotos),
+    foodEntries: merge('food_entries', (e) => e.id, (foodRes.data ?? []).map(foodEntryFromRow), current.foodEntries),
+    savedMeals: merge('saved_meals', (e) => e.id, (savedMealsRes.data ?? []).map(savedMealFromRow), current.savedMeals),
+    scheduledWorkouts: merge('scheduled_workouts', (e) => e.day, (scheduledRes.data ?? []).map(scheduledWorkoutFromRow), current.scheduledWorkouts),
+    workoutLogs: merge('workout_logs', (e) => e.id, (workoutLogsRes.data ?? []).map(workoutLogFromRow), current.workoutLogs),
+    progressPhotos: merge('progress_photos', (e) => e.id, (photosRes.data ?? []).map(progressPhotoFromRow), current.progressPhotos),
   });
+
+  const nextWatermark = maxUpdatedAt(
+    [
+      profileRes.data ? [profileRes.data] : [],
+      weightRes.data ?? [],
+      stepsRes.data ?? [],
+      sleepRes.data ?? [],
+      measurementsRes.data ?? [],
+      foodRes.data ?? [],
+      savedMealsRes.data ?? [],
+      scheduledRes.data ?? [],
+      workoutLogsRes.data ?? [],
+      photosRes.data ?? [],
+    ],
+    watermark
+  );
+  if (nextWatermark) await writeWatermark(userId, nextWatermark);
 
   // Photos are metadata rows plus a Storage object — download any file this device doesn't have
   // yet (e.g. a photo taken on another device). Fire-and-forget in the background; each is

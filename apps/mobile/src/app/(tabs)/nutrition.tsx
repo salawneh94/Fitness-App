@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, ScanBarcode, Trash2 } from 'lucide-react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
-import type { MealType, Micronutrients } from '@fittrack/shared';
+import type { FoodEntry, MealType, Micronutrients } from '@fittrack/shared';
 import { calcDailyTargets, colors, todayISO } from '@fittrack/shared';
 import Card from '@/components/ui/card';
 import CalorieRing from '@/components/charts/calorie-ring';
@@ -26,28 +26,39 @@ export default function NutritionScreen() {
   const [addingMeal, setAddingMeal] = useState<MealType | null>(null);
 
   const today = todayISO();
-  const todaysFood = foodEntries.filter((f) => f.date === today);
-  const targets = calcDailyTargets(profile);
+  const targets = useMemo(() => calcDailyTargets(profile), [profile]);
 
-  const consumed = todaysFood.reduce(
-    (acc, f) => ({
-      calories: acc.calories + f.calories * f.quantity,
-      proteinG: acc.proteinG + f.proteinG * f.quantity,
-      carbsG: acc.carbsG + f.carbsG * f.quantity,
-      fatG: acc.fatG + f.fatG * f.quantity,
-    }),
-    { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 }
-  );
+  // One pass over today's entries produces the macro totals, the micronutrient totals, and the
+  // per-meal grouping — previously this screen walked the full entry list five separate times
+  // (once for totals, then again inside each of the four meal cards) on every render.
+  const { consumed, microTotals, byMeal } = useMemo(() => {
+    const consumedTotals = { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 };
+    const micros: Micronutrients = {};
+    const grouped = new Map<MealType, FoodEntry[]>();
 
-  const microTotals: Micronutrients = {};
-  for (const f of todaysFood) {
-    if (!f.micros) continue;
-    for (const [k, v] of Object.entries(f.micros)) {
-      if (typeof v !== 'number') continue;
-      const key = k as keyof Micronutrients;
-      microTotals[key] = (microTotals[key] ?? 0) + v * f.quantity;
+    for (const f of foodEntries) {
+      if (f.date !== today) continue;
+
+      consumedTotals.calories += f.calories * f.quantity;
+      consumedTotals.proteinG += f.proteinG * f.quantity;
+      consumedTotals.carbsG += f.carbsG * f.quantity;
+      consumedTotals.fatG += f.fatG * f.quantity;
+
+      if (f.micros) {
+        for (const [k, v] of Object.entries(f.micros)) {
+          if (typeof v !== 'number') continue;
+          const key = k as keyof Micronutrients;
+          micros[key] = (micros[key] ?? 0) + v * f.quantity;
+        }
+      }
+
+      const bucket = grouped.get(f.meal);
+      if (bucket) bucket.push(f);
+      else grouped.set(f.meal, [f]);
     }
-  }
+
+    return { consumed: consumedTotals, microTotals: micros, byMeal: grouped };
+  }, [foodEntries, today]);
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top']}>
@@ -81,7 +92,7 @@ export default function NutritionScreen() {
 
         <View style={{ gap: 16 }}>
           {MEALS.map(({ key, label }) => {
-            const entries = todaysFood.filter((f) => f.meal === key);
+            const entries = byMeal.get(key) ?? [];
             const mealCals = entries.reduce((s, e) => s + e.calories * e.quantity, 0);
             return (
               <Card

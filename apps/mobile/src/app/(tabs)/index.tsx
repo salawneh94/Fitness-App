@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link } from 'expo-router';
 import { Flame, Clock, Target, TrendingUp, Pencil, Zap } from 'lucide-react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native';
@@ -26,58 +27,81 @@ export default function OverviewScreen() {
   const weightHistory = useAppStore((s) => s.weightHistory);
 
   const today = todayISO();
-  const todaysFood = foodEntries.filter((f) => f.date === today);
-  const todaysWorkouts = workoutLogs.filter((w) => w.date === today);
 
-  const consumed = todaysFood.reduce(
-    (acc, f) => ({
-      calories: acc.calories + f.calories * f.quantity,
-      proteinG: acc.proteinG + f.proteinG * f.quantity,
-      carbsG: acc.carbsG + f.carbsG * f.quantity,
-      fatG: acc.fatG + f.fatG * f.quantity,
-    }),
-    { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 }
+  // These all walk the user's full history, so they're memoized rather than recomputed on every
+  // render — by the time someone has a year of logs, `foodEntries` alone is thousands of rows.
+  const todaysFood = useMemo(() => foodEntries.filter((f) => f.date === today), [foodEntries, today]);
+  const todaysWorkouts = useMemo(() => workoutLogs.filter((w) => w.date === today), [workoutLogs, today]);
+
+  const consumed = useMemo(
+    () =>
+      todaysFood.reduce(
+        (acc, f) => ({
+          calories: acc.calories + f.calories * f.quantity,
+          proteinG: acc.proteinG + f.proteinG * f.quantity,
+          carbsG: acc.carbsG + f.carbsG * f.quantity,
+          fatG: acc.fatG + f.fatG * f.quantity,
+        }),
+        { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 }
+      ),
+    [todaysFood]
   );
 
-  const microTotals: Micronutrients = {};
-  for (const f of todaysFood) {
-    if (!f.micros) continue;
-    for (const [k, v] of Object.entries(f.micros)) {
-      if (typeof v !== 'number') continue;
-      const key = k as keyof Micronutrients;
-      microTotals[key] = (microTotals[key] ?? 0) + v * f.quantity;
+  const microTotals = useMemo(() => {
+    const totals: Micronutrients = {};
+    for (const f of todaysFood) {
+      if (!f.micros) continue;
+      for (const [k, v] of Object.entries(f.micros)) {
+        if (typeof v !== 'number') continue;
+        const key = k as keyof Micronutrients;
+        totals[key] = (totals[key] ?? 0) + v * f.quantity;
+      }
     }
-  }
+    return totals;
+  }, [todaysFood]);
 
-  const targets = calcDailyTargets(profile);
-  const workoutMinutesToday = todaysWorkouts.reduce((sum, w) => sum + w.durationMin, 0);
-  const caloriesBurnedToday = todaysWorkouts.reduce((sum, w) => sum + (w.caloriesBurned ?? 0), 0);
+  const targets = useMemo(() => calcDailyTargets(profile), [profile]);
 
-  const weeklyMinutes = workoutLogs
-    .filter((w) => {
-      const d = new Date(w.date);
-      const now = new Date();
-      const diffDays = (now.getTime() - d.getTime()) / 86400000;
-      return diffDays >= 0 && diffDays < 7;
-    })
-    .reduce((sum, w) => sum + w.durationMin, 0);
+  const { workoutMinutesToday, caloriesBurnedToday } = useMemo(
+    () => ({
+      workoutMinutesToday: todaysWorkouts.reduce((sum, w) => sum + w.durationMin, 0),
+      caloriesBurnedToday: todaysWorkouts.reduce((sum, w) => sum + (w.caloriesBurned ?? 0), 0),
+    }),
+    [todaysWorkouts]
+  );
+
+  const weeklyMinutes = useMemo(() => {
+    const now = Date.now();
+    return workoutLogs
+      .filter((w) => {
+        const diffDays = (now - new Date(w.date).getTime()) / 86400000;
+        return diffDays >= 0 && diffDays < 7;
+      })
+      .reduce((sum, w) => sum + w.durationMin, 0);
+  }, [workoutLogs]);
 
   const startWeight = weightHistory[0]?.weightKg ?? profile.weightKg;
   const weightDelta = profile.weightKg - startWeight;
 
-  const streaks = computeStreaks(foodEntries, workoutLogs, profile.createdAt.slice(0, 10));
+  const streaks = useMemo(
+    () => computeStreaks(foodEntries, workoutLogs, profile.createdAt.slice(0, 10)),
+    [foodEntries, workoutLogs, profile.createdAt]
+  );
   const celebrating = useStreakCelebration(streaks.currentStreak);
-  const restInsight = computeRestDayInsight(workoutLogs);
+  const restInsight = useMemo(() => computeRestDayInsight(workoutLogs), [workoutLogs]);
 
-  const summaryStats = [
-    { label: 'Age', value: `${profile.age}` },
-    { label: 'Height', value: formatHeight(profile.heightCm, profile.unitSystem) },
-    { label: 'Weight', value: formatWeight(profile.weightKg, profile.unitSystem) },
-    { label: 'Goal', value: GOAL_LABELS[profile.goal] },
-    ...(profile.targetWeightKg
-      ? [{ label: 'Target', value: `${formatWeight(profile.targetWeightKg, profile.unitSystem)} in ${profile.timeframeWeeks}w` }]
-      : []),
-  ];
+  const summaryStats = useMemo(
+    () => [
+      { label: 'Age', value: `${profile.age}` },
+      { label: 'Height', value: formatHeight(profile.heightCm, profile.unitSystem) },
+      { label: 'Weight', value: formatWeight(profile.weightKg, profile.unitSystem) },
+      { label: 'Goal', value: GOAL_LABELS[profile.goal] },
+      ...(profile.targetWeightKg
+        ? [{ label: 'Target', value: `${formatWeight(profile.targetWeightKg, profile.unitSystem)} in ${profile.timeframeWeeks}w` }]
+        : []),
+    ],
+    [profile]
+  );
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top']}>
