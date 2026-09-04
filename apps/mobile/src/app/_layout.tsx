@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, AppState, View } from 'react-native';
+import { ActivityIndicator, AppState, Text, View } from 'react-native';
 import { colors } from '@fittrack/shared';
 import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -67,7 +67,12 @@ export default function RootLayout() {
 
   if (!ready) {
     return (
-      <View className="flex-1 items-center justify-center" style={{ backgroundColor: colors.background }}>
+      // A bare spinner on a black field is indistinguishable from a hung app. Showing the
+      // wordmark makes the wait feel like the app starting rather than nothing happening.
+      <View className="flex-1 items-center justify-center gap-5" style={{ backgroundColor: colors.background }}>
+        <Text className="text-3xl font-bold" style={{ color: colors.textPrimary, letterSpacing: -0.8 }}>
+          Fit<Text style={{ color: colors.brandPrimary }}>Track</Text>
+        </Text>
         <ActivityIndicator color={colors.brandPrimary} />
       </View>
     );

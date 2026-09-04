@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { StyleSheet } from 'react-native';
 import { LayoutDashboard, Apple, Dumbbell, ListChecks, TrendingUp, UserRound } from 'lucide-react-native';
 import { colors } from '@fittrack/shared';
 
@@ -9,10 +10,23 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.brandPrimary,
         tabBarInactiveTintColor: colors.textMuted,
+        // Six tabs is a tight row on a 390pt phone — the stock 12pt label left "Plan Ideas"
+        // almost touching its neighbours. Smaller, tighter labels and a hairline rule instead
+        // of a full border give the bar room to breathe.
         tabBarStyle: {
           backgroundColor: colors.chartSurface,
           borderTopColor: colors.gridline,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          paddingTop: 6,
+          height: 88,
         },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '600',
+          letterSpacing: 0.1,
+          marginTop: 2,
+        },
+        tabBarIconStyle: { marginBottom: 0 },
       }}
     >
       <Tabs.Screen
@@ -29,7 +43,7 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="plans"
-        options={{ title: 'Plan Ideas', tabBarIcon: ({ color, size }) => <ListChecks color={color} size={size} /> }}
+        options={{ title: 'Plans', tabBarIcon: ({ color, size }) => <ListChecks color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="progress"

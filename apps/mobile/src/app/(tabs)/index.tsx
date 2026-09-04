@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'expo-router';
 import { Flame, Clock, Target, TrendingUp, Pencil, Zap } from 'lucide-react-native';
 import { ScrollView, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import { calcDailyTargets, GOAL_LABELS, todayISO } from '@fittrack/shared';
@@ -109,9 +110,15 @@ export default function OverviewScreen() {
       <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingVertical: 16, gap: 24 }}>
         {restInsight.shouldRest && <RestDayBanner consecutiveDays={restInsight.consecutiveTrainedDays} />}
 
-        <View
-          className="relative overflow-hidden rounded-3xl p-6"
-          style={{ backgroundColor: colors.brandPrimaryDark }}
+        <LinearGradient
+          // A flat fill reads as a placeholder at this size. The diagonal ramp toward the
+          // brighter brand tone gives the card depth without adding an image.
+          colors={[colors.brandPrimary, colors.brandPrimaryDark]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          // Styled inline rather than with className: NativeWind doesn't map className onto
+          // expo-linear-gradient, and silently dropping the padding here would be easy to miss.
+          style={{ position: 'relative', overflow: 'hidden', borderRadius: 24, padding: 24 }}
         >
           {celebrating && <Confetti />}
           <View className="flex-row items-start justify-between gap-4">
@@ -133,15 +140,18 @@ export default function OverviewScreen() {
             </View>
             <Link href="/profile" asChild>
               <PressableScale
-                className="flex-row items-center gap-1.5 px-3.5 py-2 rounded-full"
-                style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+                // Icon-only: the "Edit Profile" label ate enough of the row that a two-word
+                // greeting wrapped, orphaning the name on its own line.
+                accessibilityLabel="Edit profile"
+                accessibilityRole="button"
+                className="w-9 h-9 rounded-full items-center justify-center shrink-0"
+                style={{ backgroundColor: 'rgba(255,255,255,0.18)' }}
               >
-                <Pencil size={14} color="#fff" />
-                <Text className="text-white text-sm">Edit Profile</Text>
+                <Pencil size={15} color="#fff" />
               </PressableScale>
             </Link>
           </View>
-        </View>
+        </LinearGradient>
 
         <Card>
           <View className="flex-row flex-wrap gap-x-8 gap-y-3">
@@ -172,7 +182,7 @@ export default function OverviewScreen() {
           <View style={{ width: '47%' }}>
             <StatTile
               icon={Flame}
-              label="Calories Left Today"
+              label="Calories Left"
               value={<CountUp value={Math.max(0, Math.round(targets.calories - consumed.calories + caloriesBurnedToday))} />}
               sub={`of ${targets.calories} kcal`}
               accent={colors.series1}
@@ -181,7 +191,7 @@ export default function OverviewScreen() {
           <View style={{ width: '47%' }}>
             <StatTile
               icon={Clock}
-              label="Workout Time Today"
+              label="Workout Today"
               value={<CountUp value={workoutMinutesToday} suffix=" min" />}
               sub={todaysWorkouts.map((w) => w.workoutName).join(', ') || 'No workout logged yet'}
               accent={colors.series3}
@@ -213,6 +223,7 @@ export default function OverviewScreen() {
           <View style={{ width: '100%' }}>
             <StatTile
               icon={Zap}
+              wide
               label="Current Streak"
               value={<CountUp value={streaks.currentStreak} suffix="d" />}
               sub="days logged in a row"
