@@ -115,7 +115,7 @@ export default function GuidedWorkoutPlayer({
     <Modal visible animationType="slide" onRequestClose={onCancel}>
       <View className="flex-1 bg-black">
         <View className="flex-row items-center justify-between px-4 py-4">
-          <PressableScale onPress={onCancel} className="p-2 -ml-2">
+          <PressableScale accessibilityLabel="Exit workout" accessibilityRole="button" onPress={onCancel} className="p-2 -ml-2">
             <X size={20} color="white" />
           </PressableScale>
           <Text className="text-sm font-medium text-white/70">
@@ -153,10 +153,10 @@ export default function GuidedWorkoutPlayer({
                 ))}
               </View>
               <View className="flex-row items-center gap-4">
-                <PressableScale onPress={() => setRunning((r) => !r)} className="w-14 h-14 rounded-full bg-white/10 items-center justify-center">
+                <PressableScale accessibilityLabel={running ? 'Pause timer' : 'Resume timer'} accessibilityRole="button" onPress={() => setRunning((r) => !r)} className="w-14 h-14 rounded-full bg-white/10 items-center justify-center">
                   {running ? <Pause size={22} color="white" /> : <Play size={22} color="white" />}
                 </PressableScale>
-                <PressableScale onPress={() => setResting(false)} className="w-14 h-14 rounded-full bg-cyan-600 items-center justify-center">
+                <PressableScale accessibilityLabel="Skip rest" accessibilityRole="button" onPress={() => setResting(false)} className="w-14 h-14 rounded-full bg-cyan-600 items-center justify-center">
                   <SkipForward size={22} color="white" />
                 </PressableScale>
               </View>
@@ -192,6 +192,7 @@ export default function GuidedWorkoutPlayer({
               <View className="flex-row items-center gap-2">
                 <TextField
                   className="w-24 text-center"
+                  maxFontSizeMultiplier={1.3}
                   keyboardType="numeric"
                   placeholder={weightUnitLabel(unit)}
                   value={draftWeight}
@@ -201,13 +202,14 @@ export default function GuidedWorkoutPlayer({
                 <Text className="text-white/40 text-sm">×</Text>
                 <TextField
                   className="w-24 text-center"
+                  maxFontSizeMultiplier={1.3}
                   keyboardType="numeric"
                   placeholder="reps"
                   value={draftReps}
                   onChangeText={setDraftReps}
                   style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.2)', color: 'white' }}
                 />
-                <PressableScale hapticStyle="success" onPress={logSet} className="w-11 h-11 rounded-full bg-cyan-600 items-center justify-center">
+                <PressableScale accessibilityLabel="Log set" accessibilityRole="button" hapticStyle="success" onPress={logSet} className="w-11 h-11 rounded-full bg-cyan-600 items-center justify-center">
                   <Plus size={20} color="white" />
                 </PressableScale>
               </View>

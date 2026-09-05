@@ -131,7 +131,7 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
             <Text className="font-semibold capitalize" style={{ color: colors.textPrimary }}>
               Add to {meal}
             </Text>
-            <PressableScale onPress={onClose} className="p-1">
+            <PressableScale accessibilityLabel="Close" accessibilityRole="button" onPress={onClose} className="p-1">
               <X size={18} color={colors.textPrimary} />
             </PressableScale>
           </View>

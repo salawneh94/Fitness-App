@@ -10,6 +10,9 @@ export default function UnitToggle({ value, onChange }: { value: UnitSystem; onC
       {options.map((u) => (
         <PressableScale hapticStyle="selection"
           key={u}
+          accessibilityRole="radio"
+          accessibilityState={{ selected: value === u }}
+          accessibilityLabel={u === 'metric' ? 'Metric units, kilograms and centimetres' : 'Imperial units, pounds and feet'}
           onPress={() => onChange(u)}
           className="px-3 py-1.5 rounded-full"
           style={{ backgroundColor: value === u ? colors.brandPrimaryDark : 'transparent' }}

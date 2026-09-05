@@ -19,7 +19,7 @@ export default function ExerciseVideoModal({ exercise, onClose }: { exercise: Ex
                 {exercise.equipment} {exercise.sets && exercise.reps ? `· ${exercise.sets} × ${exercise.reps}` : exercise.notes ? `· ${exercise.notes}` : ''}
               </Text>
             </View>
-            <PressableScale onPress={onClose} className="p-1">
+            <PressableScale accessibilityLabel="Close" accessibilityRole="button" onPress={onClose} className="p-1">
               <X size={18} color={colors.textPrimary} />
             </PressableScale>
           </View>

@@ -57,7 +57,7 @@ export default function BarcodeScannerModal({
         <Text className="font-semibold" style={{ color: colors.textPrimary }}>
           Scan Barcode
         </Text>
-        <PressableScale onPress={onClose} className="p-1">
+        <PressableScale accessibilityLabel="Close scanner" accessibilityRole="button" onPress={onClose} className="p-1">
           <X size={18} color={colors.textPrimary} />
         </PressableScale>
       </View>

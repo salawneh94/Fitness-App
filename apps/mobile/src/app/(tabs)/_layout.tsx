@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { LayoutDashboard, Apple, Dumbbell, ListChecks, TrendingUp, UserRound } from 'lucide-react-native';
 import { colors } from '@fittrack/shared';
 
@@ -20,13 +20,22 @@ export default function TabsLayout() {
           paddingTop: 6,
           height: 88,
         },
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '600',
-          letterSpacing: 0.1,
-          marginTop: 2,
-        },
         tabBarIconStyle: { marginBottom: 0 },
+        // Six labels already fill the row at 10pt, so unbounded Dynamic Type overlaps them into
+        // mush. Rendering the label ourselves lets it still grow for people who need it, just
+        // not past what the row can hold — the alternative option, tabBarAllowFontScaling:
+        // false, would freeze it entirely. (iOS already pins tab labels and offers the
+        // large-content viewer on long-press; this is what covers Android, where the stock
+        // label scales without limit.)
+        tabBarLabel: ({ color, children }) => (
+          <Text
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.4}
+            style={{ color, fontSize: 10, fontWeight: '600', letterSpacing: 0.1, marginTop: 2, textAlign: 'center' }}
+          >
+            {children}
+          </Text>
+        ),
       }}
     >
       <Tabs.Screen

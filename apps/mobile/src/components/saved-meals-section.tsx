@@ -60,18 +60,18 @@ export default function SavedMealsSection() {
                 </View>
                 <View className="flex-row items-center gap-1">
                   {MEAL_CHIPS.map((c) => (
-                    <PressableScale hapticStyle="success"
+                    <PressableScale accessibilityLabel={`Log ${meal.name} as ${c.key}`} accessibilityRole="button" hapticStyle="success"
                       key={c.key}
                       onPress={() => logSavedMeal(meal.id, c.key)}
                       className="w-7 h-7 rounded-full items-center justify-center border"
                       style={{ borderColor: colors.gridline }}
                     >
-                      <Text className="text-xs font-semibold" style={{ color: colors.textSecondary }}>
+                      <Text className="text-xs font-semibold" maxFontSizeMultiplier={1.2} style={{ color: colors.textSecondary }}>
                         {c.label}
                       </Text>
                     </PressableScale>
                   ))}
-                  <PressableScale hapticStyle="warning" onPress={() => removeSavedMeal(meal.id)} className="p-1.5">
+                  <PressableScale accessibilityLabel={`Delete ${meal.name}`} accessibilityRole="button" hapticStyle="warning" onPress={() => removeSavedMeal(meal.id)} className="p-1.5">
                     <Trash2 size={15} color={colors.textMuted} />
                   </PressableScale>
                 </View>

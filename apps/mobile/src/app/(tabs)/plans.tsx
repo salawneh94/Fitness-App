@@ -114,7 +114,7 @@ export default function PlansScreen() {
                                 <Text className="text-sm flex-1 mr-2" style={{ color: colors.textPrimary }}>
                                   {ex.name}
                                 </Text>
-                                <PressableScale onPress={() => setVideoExercise(ex)}>
+                                <PressableScale accessibilityLabel={`Watch ${ex.name} demo`} accessibilityRole="button" onPress={() => setVideoExercise(ex)}>
                                   <PlayCircle size={15} color={colors.brandPrimary} />
                                 </PressableScale>
                               </View>

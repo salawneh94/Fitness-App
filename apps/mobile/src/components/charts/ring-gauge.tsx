@@ -73,10 +73,10 @@ export default function RingGauge({
         />
       </Svg>
       <View className="absolute inset-0 items-center justify-center">
-        <Text className="text-2xl font-bold" style={{ color: colors.textPrimary }}>
+        <Text className="text-2xl font-bold" maxFontSizeMultiplier={1.3} style={{ color: colors.textPrimary }}>
           {centerValue}
         </Text>
-        <Text className="text-xs text-center px-2" style={{ color: colors.textMuted }}>
+        <Text className="text-xs text-center px-2" maxFontSizeMultiplier={1.3} style={{ color: colors.textMuted }}>
           {centerLabel}
         </Text>
       </View>

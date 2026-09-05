@@ -128,7 +128,7 @@ export default function NutritionScreen() {
                             {e.quantity} × {e.servingLabel ?? 'serving'} · {Math.round(e.calories * e.quantity)} kcal
                           </Text>
                         </View>
-                        <PressableScale hapticStyle="warning" onPress={() => removeFoodEntry(e.id)} className="p-1.5">
+                        <PressableScale accessibilityLabel={`Remove ${e.name}`} accessibilityRole="button" hapticStyle="warning" onPress={() => removeFoodEntry(e.id)} className="p-1.5">
                           <Trash2 size={15} color={colors.textMuted} />
                         </PressableScale>
                       </View>

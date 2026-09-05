@@ -83,7 +83,7 @@ export default function OnboardingWizard() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       <View className="flex-1 px-6 py-4 max-w-md w-full self-center">
         <View className="flex-row items-center justify-between mb-6">
-          <PressableScale hapticStyle="selection"
+          <PressableScale accessibilityLabel="Go back" accessibilityRole="button" hapticStyle="selection"
             onPress={() => setStep((s) => Math.max(0, s - 1))}
             className="p-2 -ml-2"
             style={{ opacity: step === 0 ? 0 : 1 }}
@@ -170,6 +170,8 @@ function OptionButton({ selected, onPress, children }: { selected: boolean; onPr
   return (
     <PressableScale
       onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ selected }}
       className="w-full flex-row items-center justify-between px-5 py-4 rounded-2xl border-2"
       style={{
         borderColor: selected ? colors.brandPrimary : colors.gridline,
@@ -217,17 +219,17 @@ function StepAge({ value, onChange }: { value: number; onChange: (v: number) => 
     <View>
       <StepHeader title="How old are you?" sub="This helps us create your personalized plan." />
       <View className="flex-row items-center justify-center gap-6">
-        <PressableScale hapticStyle="selection"
+        <PressableScale accessibilityLabel="Decrease age" accessibilityRole="button" hapticStyle="selection"
           onPress={() => onChange(Math.max(13, value - 1))}
           className="w-11 h-11 rounded-full border items-center justify-center"
           style={{ borderColor: colors.gridline }}
         >
           <Minus size={18} color={colors.textPrimary} />
         </PressableScale>
-        <Text className="text-5xl font-bold w-24 text-center" style={{ color: colors.textPrimary }}>
+        <Text className="text-5xl font-bold w-24 text-center" maxFontSizeMultiplier={1.2} style={{ color: colors.textPrimary }}>
           {value}
         </Text>
-        <PressableScale hapticStyle="selection"
+        <PressableScale accessibilityLabel="Increase age" accessibilityRole="button" hapticStyle="selection"
           onPress={() => onChange(Math.min(100, value + 1))}
           className="w-11 h-11 rounded-full border items-center justify-center"
           style={{ borderColor: colors.gridline }}

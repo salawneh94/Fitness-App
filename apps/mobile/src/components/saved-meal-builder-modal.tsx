@@ -50,7 +50,7 @@ export default function SavedMealBuilderModal({ onClose }: { onClose: () => void
             <Text className="font-semibold" style={{ color: colors.textPrimary }}>
               New Saved Meal
             </Text>
-            <PressableScale onPress={onClose} className="p-1">
+            <PressableScale accessibilityLabel="Close" accessibilityRole="button" onPress={onClose} className="p-1">
               <X size={18} color={colors.textPrimary} />
             </PressableScale>
           </View>
@@ -76,7 +76,7 @@ export default function SavedMealBuilderModal({ onClose }: { onClose: () => void
                       {item.quantity} × {item.servingLabel} · {Math.round(item.calories * item.quantity)} kcal
                     </Text>
                   </View>
-                  <PressableScale hapticStyle="warning" onPress={() => removeItem(idx)} className="p-1.5">
+                  <PressableScale accessibilityLabel="Remove item" accessibilityRole="button" hapticStyle="warning" onPress={() => removeItem(idx)} className="p-1.5">
                     <Trash2 size={15} color={colors.textMuted} />
                   </PressableScale>
                 </View>

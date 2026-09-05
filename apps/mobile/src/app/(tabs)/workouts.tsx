@@ -65,6 +65,8 @@ export default function WorkoutsScreen() {
             return (
               <PressableScale hapticStyle="selection"
                 key={day}
+                accessibilityRole="button"
+                accessibilityLabel={`${day}: ${w ? w.name : 'Rest day'}`}
                 onPress={() => setActiveDay(day)}
                 className="rounded-2xl border p-3"
                 style={{
@@ -123,7 +125,7 @@ export default function WorkoutsScreen() {
                       </Text>
                     </View>
                   </View>
-                  <PressableScale hapticStyle="warning" onPress={() => removeWorkoutLog(log.id)} className="p-1.5">
+                  <PressableScale accessibilityLabel="Delete workout log" accessibilityRole="button" hapticStyle="warning" onPress={() => removeWorkoutLog(log.id)} className="p-1.5">
                     <Trash2 size={15} color={colors.textMuted} />
                   </PressableScale>
                 </View>
@@ -214,7 +216,7 @@ function DayDetailModal({
             <Text className="font-semibold flex-1 mr-2" style={{ color: colors.textPrimary }}>
               {day} — {workout?.name ?? 'Rest Day'}
             </Text>
-            <PressableScale onPress={onClose} className="p-1">
+            <PressableScale accessibilityLabel="Close" accessibilityRole="button" onPress={onClose} className="p-1">
               <X size={18} color={colors.textPrimary} />
             </PressableScale>
           </View>
@@ -236,7 +238,7 @@ function DayDetailModal({
                         {ex.equipment} {ex.sets && ex.reps ? `· ${ex.sets} × ${ex.reps}` : ex.notes ? `· ${ex.notes}` : ''}
                       </Text>
                     </View>
-                    <PressableScale onPress={() => setVideoExercise(ex)} className="flex-row items-center gap-1">
+                    <PressableScale accessibilityLabel={`Watch ${ex.name} demo`} accessibilityRole="button" onPress={() => setVideoExercise(ex)} className="flex-row items-center gap-1">
                       <PlayCircle size={16} color={colors.brandPrimary} />
                       <Text className="text-xs font-medium" style={{ color: colors.brandPrimary }}>
                         Demo
@@ -316,7 +318,7 @@ function EditDayModal({
             <Text className="font-semibold" style={{ color: colors.textPrimary }}>
               Edit {day}
             </Text>
-            <PressableScale onPress={onClose} className="p-1">
+            <PressableScale accessibilityLabel="Close" accessibilityRole="button" onPress={onClose} className="p-1">
               <X size={18} color={colors.textPrimary} />
             </PressableScale>
           </View>
@@ -432,7 +434,7 @@ function LogWorkoutModal({
             <Text className="font-semibold" style={{ color: colors.textPrimary }}>
               Log: {workout.name}
             </Text>
-            <PressableScale onPress={onClose} className="p-1">
+            <PressableScale accessibilityLabel="Close" accessibilityRole="button" onPress={onClose} className="p-1">
               <X size={18} color={colors.textPrimary} />
             </PressableScale>
           </View>
@@ -498,7 +500,7 @@ function LogWorkoutModal({
                           <Text className="text-xs" style={{ color: colors.textMuted }}>
                             reps
                           </Text>
-                          <PressableScale hapticStyle="warning" onPress={() => removeSet(ex.id, idx)} className="ml-auto p-1">
+                          <PressableScale accessibilityLabel="Remove set" accessibilityRole="button" hapticStyle="warning" onPress={() => removeSet(ex.id, idx)} className="ml-auto p-1">
                             <Minus size={14} color={colors.textMuted} />
                           </PressableScale>
                         </View>

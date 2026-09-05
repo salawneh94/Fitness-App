@@ -37,6 +37,9 @@ export default function CalorieTrendChart({ foodEntries, targetCalories }: { foo
         {([7, 30] as const).map((r) => (
           <PressableScale hapticStyle="selection"
             key={r}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: range === r }}
+            accessibilityLabel={`Last ${r} days`}
             onPress={() => setRange(r)}
             className="px-2.5 py-1 rounded-full"
             style={{ backgroundColor: range === r ? colors.brandPrimaryDark : 'transparent' }}

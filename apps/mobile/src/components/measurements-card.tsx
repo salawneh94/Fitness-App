@@ -66,6 +66,9 @@ export default function MeasurementsCard({ unit }: { unit: UnitSystem }) {
           return (
             <PressableScale hapticStyle="selection"
               key={key}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: isSelected }}
+              accessibilityLabel={`Show ${label} trend`}
               onPress={() => setSelected(key)}
               className="px-2.5 py-1.5 rounded-full border"
               style={{
