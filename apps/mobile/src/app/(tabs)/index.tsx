@@ -16,6 +16,7 @@ import CalorieRing from '@/components/charts/calorie-ring';
 import MacroBars from '@/components/charts/macro-bars';
 import MicronutrientList from '@/components/micronutrient-list';
 import RestDayBanner from '@/components/rest-day-banner';
+import SyncStatusBanner from '@/components/sync-status';
 import QuickLogCard from '@/components/quick-log-card';
 import MotivationalTagline from '@/components/motivational-tagline';
 import Confetti from '@/components/confetti';
@@ -108,6 +109,7 @@ export default function OverviewScreen() {
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top']}>
       <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingVertical: 16, gap: 24 }}>
+        <SyncStatusBanner />
         {restInsight.shouldRest && <RestDayBanner consecutiveDays={restInsight.consecutiveTrainedDays} />}
 
         <LinearGradient

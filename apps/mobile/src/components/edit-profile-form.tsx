@@ -16,6 +16,7 @@ import UnitToggle from './ui/unit-toggle';
 import TextField from './ui/text-field';
 import SelectField from './ui/select-field';
 import PressableScale from '@/components/ui/pressable-scale';
+import { SyncStatusLine } from '@/components/sync-status';
 
 const GOALS: Goal[] = ['lose_fat', 'build_muscle', 'maintain', 'improve_endurance', 'general_health'];
 const ACTIVITIES: ActivityLevel[] = ['sedentary', 'light', 'moderate', 'active', 'very_active'];
@@ -261,10 +262,13 @@ export default function EditProfileForm() {
 
           <Card title="Account">
             {authEmail && (
-              <Text className="text-sm mb-4" style={{ color: colors.textSecondary }}>
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>
                 Signed in as {authEmail}
               </Text>
             )}
+            <View className="mt-1 mb-4">
+              <SyncStatusLine />
+            </View>
             <PressableScale
               onPress={() =>
                 Alert.alert('Sign out', 'You can sign back in any time to pick up where you left off.', [

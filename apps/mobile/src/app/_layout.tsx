@@ -17,6 +17,10 @@ import PaywallScreen from '@/components/paywall-screen';
 
 SplashScreen.preventAutoHideAsync();
 
+// Expo Router mounts this around everything below the root route, so any render that throws
+// lands on a recoverable screen instead of a blank one.
+export { default as ErrorBoundary } from '@/components/crash-screen';
+
 export default function RootLayout() {
   const storeHydrated = useHydrated();
   const authHydrated = useAuthStore((s) => s.hydrated);

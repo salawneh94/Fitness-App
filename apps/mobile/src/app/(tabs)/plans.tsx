@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { randomUUID } from 'expo-crypto';
 import { CheckCircle2, Dumbbell, PlayCircle, Sparkles } from 'lucide-react-native';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
-import type { Exercise, ScheduledWorkout, Weekday } from '@fittrack/shared';
+import type { Exercise } from '@fittrack/shared';
 import { PLAN_TEMPLATES, colors, recommendPlan } from '@fittrack/shared';
 import Card from '@/components/ui/card';
 import ExerciseVideoModal from '@/components/exercise-video-modal';
 import PressableScale from '@/components/ui/pressable-scale';
-
-const WEEKDAYS: Weekday[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+import { buildScheduledWorkouts } from '@/lib/apply-plan';
 
 export default function PlansScreen() {
   const profile = useAppStore((s) => s.profile)!; // gated by root layout
@@ -25,13 +23,7 @@ export default function PlansScreen() {
   function applyPlan(templateId: string) {
     const template = PLAN_TEMPLATES.find((t) => t.id === templateId);
     if (!template) return;
-    const workouts: ScheduledWorkout[] = template.days.slice(0, 7).map((d, i) => ({
-      id: randomUUID(),
-      day: WEEKDAYS[i],
-      name: `${d.label}: ${d.focus}`,
-      exercises: d.exercises,
-    }));
-    setScheduledWorkouts(workouts);
+    setScheduledWorkouts(buildScheduledWorkouts(template));
     setAppliedId(templateId);
   }
 

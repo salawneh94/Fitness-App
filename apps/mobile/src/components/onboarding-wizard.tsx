@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { ArrowLeft, Minus, Plus, Check } from 'lucide-react-native';
+import { ArrowLeft, Minus, Plus, Check, Sparkles } from 'lucide-react-native';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import type { ActivityLevel, Goal, Profile, Sex, UnitSystem } from '@fittrack/shared';
-import { ACTIVITY_LABELS, GOAL_LABELS, planDailyTargets, colors } from '@fittrack/shared';
+import { ACTIVITY_LABELS, GOAL_LABELS, planDailyTargets, recommendPlan, colors } from '@fittrack/shared';
 import TargetPlanNote from './target-plan-note';
 import WeightInput from './ui/weight-input';
 import HeightInput from './ui/height-input';
 import UnitToggle from './ui/unit-toggle';
 import TextField from './ui/text-field';
 import PressableScale from '@/components/ui/pressable-scale';
+import { buildScheduledWorkouts } from '@/lib/apply-plan';
 
 const GOALS: Goal[] = ['lose_fat', 'build_muscle', 'maintain', 'improve_endurance', 'general_health'];
 const ACTIVITIES: ActivityLevel[] = ['sedentary', 'light', 'moderate', 'active', 'very_active'];
@@ -33,6 +34,7 @@ interface WizardForm {
 
 export default function OnboardingWizard() {
   const setProfile = useAppStore((s) => s.setProfile);
+  const setScheduledWorkouts = useAppStore((s) => s.setScheduledWorkouts);
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<WizardForm>({
     name: '',
@@ -56,6 +58,14 @@ export default function OnboardingWizard() {
   function finish() {
     const profile: Profile = { ...form, createdAt: new Date().toISOString() };
     setProfile(profile);
+    // Onboarding already asked for the goal, activity level and days-per-week that
+    // recommendPlan needs, so there's no reason to drop the user into an empty week and make
+    // them go find the Plans tab. Only seed when the schedule is genuinely empty — a returning
+    // user re-running onboarding shouldn't have their own plan overwritten.
+    if (useAppStore.getState().scheduledWorkouts.length === 0) {
+      const recommendation = recommendPlan(profile);
+      if (recommendation) setScheduledWorkouts(buildScheduledWorkouts(recommendation.template));
+    }
   }
 
   const canProceed = [
@@ -383,6 +393,7 @@ function StepTarget({
 function StepReview({ form }: { form: WizardForm }) {
   const profile: Profile = { ...form, createdAt: new Date().toISOString() };
   const targets = planDailyTargets(profile);
+  const recommendation = recommendPlan(profile);
   const stats = [
     { value: `${targets.calories}`, label: 'kcal / day' },
     { value: `${targets.proteinG}g`, label: 'protein' },
@@ -409,6 +420,24 @@ function StepReview({ form }: { form: WizardForm }) {
         ))}
       </View>
       <TargetPlanNote profile={profile} plan={targets} />
+
+      {recommendation && (
+        <View
+          className="flex-row items-start gap-3 p-4 rounded-2xl border mt-4"
+          style={{ backgroundColor: 'rgba(34,211,238,0.08)', borderColor: colors.brandPrimary }}
+        >
+          <Sparkles size={18} color={colors.brandPrimary} style={{ marginTop: 2 }} />
+          <View className="flex-1">
+            <Text className="text-sm font-medium" style={{ color: colors.textPrimary }}>
+              We'll start you on {recommendation.template.name}
+            </Text>
+            <Text className="text-xs mt-0.5" style={{ color: colors.textSecondary }}>
+              {recommendation.reason} Swap it for any other plan from the Plans tab whenever you like.
+            </Text>
+          </View>
+        </View>
+      )}
+
       <Text className="text-xs text-center mt-4" style={{ color: colors.textMuted }}>
         You can fine-tune anything later from your Profile page.
       </Text>
