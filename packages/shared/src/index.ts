@@ -6,3 +6,4 @@ export * from './planRecommendation';
 export * from './types';
 export * from './data/exercises';
 export * from './data/planTemplates';
+export * from './adaptiveTdee';

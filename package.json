@@ -7,6 +7,11 @@
     "web": "pnpm --filter web dev",
     "web:build": "pnpm --filter web build",
     "web:lint": "pnpm --filter web lint",
-    "web:preview": "pnpm --filter web preview"
+    "web:preview": "pnpm --filter web preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.0"
   }
 }

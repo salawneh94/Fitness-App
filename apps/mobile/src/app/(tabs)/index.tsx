@@ -5,7 +5,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
-import { calcDailyTargets, GOAL_LABELS, todayISO } from '@fittrack/shared';
+import { GOAL_LABELS, todayISO } from '@fittrack/shared';
 import { computeStreaks, computeRestDayInsight } from '@fittrack/shared';
 import { displayWeight, formatHeight, formatWeight, weightUnitLabel, colors } from '@fittrack/shared';
 import type { Micronutrients } from '@fittrack/shared';
@@ -21,6 +21,7 @@ import QuickLogCard from '@/components/quick-log-card';
 import MotivationalTagline from '@/components/motivational-tagline';
 import Confetti from '@/components/confetti';
 import { useStreakCelebration } from '@/hooks/use-streak-celebration';
+import { useAdaptiveTargets } from '@/hooks/use-adaptive-targets';
 import PressableScale from '@/components/ui/pressable-scale';
 
 export default function OverviewScreen() {
@@ -63,7 +64,7 @@ export default function OverviewScreen() {
     return totals;
   }, [todaysFood]);
 
-  const targets = useMemo(() => calcDailyTargets(profile), [profile]);
+  const { targets } = useAdaptiveTargets(profile);
 
   const { workoutMinutesToday, caloriesBurnedToday } = useMemo(
     () => ({

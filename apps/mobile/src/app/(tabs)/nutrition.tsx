@@ -3,8 +3,10 @@ import { Plus, ScanBarcode, Trash2 } from 'lucide-react-native';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
+import { useAdaptiveTargets } from '@/hooks/use-adaptive-targets';
+import AdaptiveTargetCard from '@/components/adaptive-target-card';
 import type { FoodEntry, MealType, Micronutrients } from '@fittrack/shared';
-import { calcDailyTargets, colors, todayISO } from '@fittrack/shared';
+import { colors, todayISO } from '@fittrack/shared';
 import Card from '@/components/ui/card';
 import CalorieRing from '@/components/charts/calorie-ring';
 import MacroBars from '@/components/charts/macro-bars';
@@ -27,7 +29,8 @@ export default function NutritionScreen() {
   const [addingMeal, setAddingMeal] = useState<MealType | null>(null);
 
   const today = todayISO();
-  const targets = useMemo(() => calcDailyTargets(profile), [profile]);
+  const adaptiveTargets = useAdaptiveTargets(profile);
+  const { targets } = adaptiveTargets;
 
   // One pass over today's entries produces the macro totals, the micronutrient totals, and the
   // per-meal grouping — previously this screen walked the full entry list five separate times
@@ -76,6 +79,8 @@ export default function NutritionScreen() {
         <Card title="Calories">
           <CalorieRing consumed={consumed.calories} target={targets.calories} />
         </Card>
+
+        <AdaptiveTargetCard state={adaptiveTargets} unitSystem={profile.unitSystem} />
 
         <Card title="Macros">
           <MacroBars

@@ -77,8 +77,11 @@ export interface TargetPlan extends DailyTargets {
  * When there's no meaningful weight target (target equals current, or it's missing), it falls back
  * to the goal's generic adjustment so the number is still sensible.
  */
-export function planDailyTargets(profile: Profile): TargetPlan {
-  const tdee = calcTDEE(profile);
+export function planDailyTargets(profile: Profile, measuredTDEE?: number): TargetPlan {
+  // A measured maintenance figure (see estimateAdaptiveTDEE) replaces the formula when one is
+  // available, and then flows through the same rate caps and calorie floor below — the safety
+  // limits apply to a measurement exactly as they do to an estimate.
+  const tdee = measuredTDEE ?? calcTDEE(profile);
   const floor = calorieFloor(profile);
 
   const target = profile.targetWeightKg;
@@ -139,8 +142,8 @@ export function planDailyTargets(profile: Profile): TargetPlan {
   };
 }
 
-export function calcDailyTargets(profile: Profile): DailyTargets {
-  const { calories, proteinG, carbsG, fatG } = planDailyTargets(profile);
+export function calcDailyTargets(profile: Profile, measuredTDEE?: number): DailyTargets {
+  const { calories, proteinG, carbsG, fatG } = planDailyTargets(profile, measuredTDEE);
   return { calories, proteinG, carbsG, fatG };
 }
 

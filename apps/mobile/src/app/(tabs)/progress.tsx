@@ -6,10 +6,10 @@ import { Award, CalendarCheck, Camera, Flame, Plus, Trash2 } from 'lucide-react-
 import { Modal, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
+import { useAdaptiveTargets } from '@/hooks/use-adaptive-targets';
 import {
   SLEEP_GOAL_HOURS,
   STEP_GOAL,
-  calcDailyTargets,
   colors,
   computeStreaks,
   displayWeight,
@@ -31,6 +31,7 @@ import PressableScale from '@/components/ui/pressable-scale';
 
 export default function ProgressScreen() {
   const profile = useAppStore((s) => s.profile)!; // gated by root layout
+  const { targets } = useAdaptiveTargets(profile);
   const foodEntries = useAppStore((s) => s.foodEntries);
   const workoutLogs = useAppStore((s) => s.workoutLogs);
   const weightHistory = useAppStore((s) => s.weightHistory);
@@ -136,7 +137,7 @@ export default function ProgressScreen() {
         </Card>
 
         <Card title="Calorie Trend">
-          <CalorieTrendChart foodEntries={foodEntries} targetCalories={calcDailyTargets(profile).calories} />
+          <CalorieTrendChart foodEntries={foodEntries} targetCalories={targets.calories} />
         </Card>
 
         <Card title="Weight Trend">
