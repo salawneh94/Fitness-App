@@ -7,3 +7,5 @@ export * from './types';
 export * from './data/exercises';
 export * from './data/planTemplates';
 export * from './adaptiveTdee';
+export * from './foodHistory';
+export * from './progression';

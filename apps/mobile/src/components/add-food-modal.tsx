@@ -1,15 +1,22 @@
-import { useState } from 'react';
-import { X, ScanBarcode, PenLine, Loader2, CircleCheck, Utensils } from 'lucide-react-native';
+import { useMemo, useState } from 'react';
+import { X, ScanBarcode, PenLine, Loader2, CircleCheck, Utensils, History } from 'lucide-react-native';
 import { Modal, ScrollView, Text, View } from 'react-native';
 import { useAppStore } from '@/store/useAppStore';
 import type { FoodEntry, MealType } from '@fittrack/shared';
-import { todayISO, colors } from '@fittrack/shared';
+import { addDaysISO, foodsFromDay, recentFoods, todayISO, colors, type RecentFood } from '@fittrack/shared';
 import { lookupBarcode, type ScannedProduct } from '@/lib/food-api';
 import BarcodeScannerModal from './barcode-scanner-modal';
 import TextField from './ui/text-field';
 import PressableScale from '@/components/ui/pressable-scale';
 
 type Mode = 'choose' | 'scan' | 'manual' | 'confirmScanned' | 'savedMeals';
+
+const MEAL_LABELS: Record<MealType, string> = {
+  breakfast: 'breakfast',
+  lunch: 'lunch',
+  dinner: 'dinner',
+  snack: 'snacks',
+};
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -41,6 +48,7 @@ function ChoiceRow({ icon: Icon, title, sub, onPress }: { icon: typeof ScanBarco
 
 export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClose: () => void }) {
   const addFoodEntry = useAppStore((s) => s.addFoodEntry);
+  const foodEntries = useAppStore((s) => s.foodEntries);
   const savedMeals = useAppStore((s) => s.savedMeals);
   const logSavedMeal = useAppStore((s) => s.logSavedMeal);
   const [mode, setMode] = useState<Mode>('choose');
@@ -48,6 +56,18 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
   const [error, setError] = useState<string | null>(null);
   const [scanned, setScanned] = useState<ScannedProduct | null>(null);
   const [grams, setGrams] = useState('100');
+
+  // Both walk the whole history, so they're memoized — this modal opens on every meal log.
+  const recents = useMemo(() => recentFoods(foodEntries, meal), [foodEntries, meal]);
+  const yesterdays = useMemo(
+    () => foodsFromDay(foodEntries, addDaysISO(todayISO(), -1), meal),
+    [foodEntries, meal]
+  );
+
+  /** Re-log a previously eaten food as a new entry today — never a copy of the old row. */
+  function logRecent(food: RecentFood) {
+    addFoodEntry({ ...food, date: todayISO(), meal });
+  }
 
   const [manual, setManual] = useState({
     name: '',
@@ -150,6 +170,61 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
                   {error}
                 </Text>
               )}
+
+              {/* Repeat and recents come first, above scan and manual entry: for anyone past
+                  their first week these are the paths that get used, and burying them under
+                  "Scan Barcode" is what makes logging feel like data entry. */}
+              {yesterdays.length > 0 && (
+                <ChoiceRow
+                  icon={History}
+                  title={`Repeat yesterday's ${MEAL_LABELS[meal]}`}
+                  sub={`${yesterdays.length} item${yesterdays.length === 1 ? '' : 's'} · ${Math.round(
+                    yesterdays.reduce((s, f) => s + f.calories * f.quantity, 0)
+                  )} kcal`}
+                  onPress={() => {
+                    for (const food of yesterdays) logRecent(food);
+                    onClose();
+                  }}
+                />
+              )}
+
+              {recents.length > 0 && (
+                <View>
+                  <Text className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: colors.textMuted }}>
+                    Recent
+                  </Text>
+                  <View className="rounded-xl border overflow-hidden" style={{ borderColor: colors.gridline }}>
+                    {recents.map((food, i) => (
+                      <PressableScale
+                        key={`${food.name}-${food.brand ?? ''}-${food.servingLabel ?? ''}`}
+                        hapticStyle="success"
+                        accessibilityRole="button"
+                        accessibilityLabel={`Log ${food.name}`}
+                        onPress={() => {
+                          logRecent(food);
+                          onClose();
+                        }}
+                        className="flex-row items-center justify-between gap-3 px-4 py-3"
+                        style={i > 0 ? { borderTopWidth: 1, borderTopColor: colors.gridline } : undefined}
+                      >
+                        <View className="flex-1 min-w-0">
+                          <Text numberOfLines={1} className="text-sm font-medium" style={{ color: colors.textPrimary }}>
+                            {food.name}
+                          </Text>
+                          <Text numberOfLines={1} className="text-xs" style={{ color: colors.textMuted }}>
+                            {food.brand ? `${food.brand} · ` : ''}
+                            {food.quantity} × {food.servingLabel ?? 'serving'}
+                          </Text>
+                        </View>
+                        <Text className="text-sm shrink-0" style={{ color: colors.textSecondary }}>
+                          {Math.round(food.calories * food.quantity)} kcal
+                        </Text>
+                      </PressableScale>
+                    ))}
+                  </View>
+                </View>
+              )}
+
               <ChoiceRow
                 icon={ScanBarcode}
                 title="Scan Barcode / QR"

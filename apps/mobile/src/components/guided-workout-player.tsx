@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronLeft, ChevronRight, Pause, Play, PlayCircle, Plus, SkipForward, X } from 'lucide-react-native';
 import { Modal, Text, View } from 'react-native';
 import type { ExerciseLogEntry, ScheduledWorkout, UnitSystem } from '@fittrack/shared';
 import { displayWeight, toKgFromDisplay, weightUnitLabel } from '@fittrack/shared';
+import { lastPerformance, suggestNextLoad } from '@fittrack/shared';
+import { useAppStore } from '@/store/useAppStore';
 import ExerciseVideoModal from './exercise-video-modal';
 import Confetti from './confetti';
 import TextField from './ui/text-field';
@@ -44,6 +46,15 @@ export default function GuidedWorkoutPlayer({
 
   const exercise = workout.exercises[exerciseIndex];
   const isLast = exerciseIndex === workout.exercises.length - 1;
+
+  const workoutLogs = useAppStore((s) => s.workoutLogs);
+  const suggestion = useMemo(() => {
+    const previous = lastPerformance(workoutLogs, exercise.id);
+    return previous ? suggestNextLoad(previous, exercise, workoutLogs) : null;
+  }, [workoutLogs, exercise]);
+
+  /** Weights are stored in kg; the player shows whatever unit the user picked. */
+  const fmt = (kg: number) => Math.round(displayWeight(kg, unit) * 10) / 10;
 
   useEffect(() => {
     if (!running) return;
@@ -186,6 +197,35 @@ export default function GuidedWorkoutPlayer({
                       </Text>
                     </View>
                   ))}
+                </View>
+              )}
+
+              {/* The one question anyone has walking up to a bar. Every set, rep and kilo needed
+                  to answer it was already being logged and only ever fed a chart. */}
+              {suggestion && setsForExercise.length === 0 && (
+                <View className="items-center mb-5 px-4">
+                  <Text className="text-xs text-white/50 mb-1">
+                    Last time: {fmt(suggestion.previous.weightKg)} {weightUnitLabel(unit)} ×{' '}
+                    {suggestion.previous.reps.join(', ')}
+                  </Text>
+                  <Text className="text-sm font-semibold" style={{ color: '#22d3ee' }}>
+                    {suggestion.action === 'increase_weight'
+                      ? `Try ${fmt(suggestion.weightKg)} ${weightUnitLabel(unit)} × ${suggestion.targetReps}`
+                      : suggestion.action === 'add_reps'
+                        ? `Aim for ${suggestion.targetReps} reps at ${fmt(suggestion.weightKg)} ${weightUnitLabel(unit)}`
+                        : `Hold ${suggestion.targetReps} reps — add load when you can`}
+                  </Text>
+                  {suggestion.action === 'increase_weight' && (
+                    <Text className="text-xs text-white/40 mt-0.5">
+                      You hit the top of the range on every set
+                    </Text>
+                  )}
+                  {suggestion.action === 'add_reps' && suggestion.sessionsAtWeight >= 3 && (
+                    <Text className="text-xs text-white/40 mt-0.5">
+                      {suggestion.sessionsAtWeight} sessions at this weight — if it stalls again, try dropping
+                      10% and building back
+                    </Text>
+                  )}
                 </View>
               )}
 
