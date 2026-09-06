@@ -74,11 +74,19 @@ export default function PrivacyPolicyPage() {
         </Section>
 
         <Section title="Your choices">
-          <p><strong>Access & export.</strong> Everything you've entered is visible to you in the app at any time.</p>
+          <p><strong>Access &amp; export.</strong> Everything you've entered is visible to you in the app at any
+            time, and <strong>Profile → Export my data</strong> gives you the whole lot as a JSON file you can
+            keep or move elsewhere. Progress photos are listed by date and note; the images themselves you can
+            save from the app directly.</p>
           <p><strong>Deletion.</strong> You can delete individual entries (food logs, workouts, photos, etc.)
-            directly in the app at any time. To delete your account and all associated data, email{' '}
-            <a href={`mailto:${CONTACT_EMAIL}`} className="underline">{CONTACT_EMAIL}</a> from your account's
-            email address, and we'll delete it within 30 days.</p>
+            directly in the app at any time. To delete your account and everything in it, use{' '}
+            <strong>Profile → Delete Account</strong> — this happens immediately and cannot be undone. You can
+            also email <a href={`mailto:${CONTACT_EMAIL}`} className="underline">{CONTACT_EMAIL}</a> from your
+            account's email address if you'd rather we did it for you, and we'll delete it within 30 days.</p>
+          <p><strong>Notifications.</strong> FitTrack can send you an optional daily reminder if you haven't
+            logged anything that day. It's off until you turn it on in <strong>Profile → Daily reminder</strong>,
+            it's scheduled entirely on your own device, and nothing about it is sent to us or to anyone else. You
+            can turn it off in the app, or in your device's notification settings, at any time.</p>
           <p><strong>Sign out.</strong> Signing out on a device stops that device from syncing, but doesn't delete
             your account.</p>
         </Section>
