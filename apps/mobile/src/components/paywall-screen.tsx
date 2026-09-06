@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { CheckCircle2, Loader2 } from 'lucide-react-native';
 import { Linking, Platform, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '@fittrack/shared';
+import { colors, planDailyTargets } from '@fittrack/shared';
+import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useEntitlementStore } from '@/store/useEntitlementStore';
 import PressableScale from '@/components/ui/pressable-scale';
@@ -26,6 +27,14 @@ export default function PaywallScreen() {
   const purchase = useEntitlementStore((s) => s.purchase);
   const restore = useEntitlementStore((s) => s.restore);
   const signOut = useAuthStore((s) => s.signOut);
+
+  // This screen only ever renders after onboarding (see the gate order in _layout), so the
+  // profile and the seeded plan are already there. Selling four generic bullets at the exact
+  // moment the app can show someone their own numbers is a wasted screen.
+  const profile = useAppStore((s) => s.profile);
+  const scheduledWorkouts = useAppStore((s) => s.scheduledWorkouts);
+  const targets = useMemo(() => (profile ? planDailyTargets(profile) : null), [profile]);
+  const trainingDays = scheduledWorkouts.length;
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,17 +66,59 @@ export default function PaywallScreen() {
       <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingVertical: 24, flexGrow: 1 }}>
         <View className="flex-1 justify-center">
           <Text className="text-2xl font-bold mb-2" style={{ color: colors.textPrimary }}>
-            {hasFreeTrial ? 'Try FitTrack free for 14 days' : 'Unlock FitTrack'}
+            {profile ? `Your plan is ready, ${profile.name.split(' ')[0]}` : 'Unlock FitTrack'}
           </Text>
-          <Text className="text-sm mb-8" style={{ color: colors.textSecondary }}>
-            Everything in FitTrack, in one subscription.
+          <Text className="text-sm mb-6" style={{ color: colors.textSecondary }}>
+            {hasFreeTrial
+              ? 'Start your 14-day free trial to begin tracking against it.'
+              : 'Subscribe to begin tracking against it.'}
           </Text>
 
-          <View className="gap-3 mb-8">
+          {/* The user's own numbers, worked out from what they just told us. Someone who has
+              answered eight questions has earned a look at the answer — and a target with their
+              name on it argues for the subscription better than a feature list can. */}
+          {targets && (
+            <View
+              className="rounded-2xl p-4 mb-4 border"
+              style={{ backgroundColor: colors.chartSurface, borderColor: colors.gridline }}
+            >
+              <Text className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: colors.textMuted }}>
+                Your daily targets
+              </Text>
+              <View className="flex-row justify-between">
+                {[
+                  { value: targets.calories.toLocaleString(), label: 'kcal' },
+                  { value: `${targets.proteinG}g`, label: 'protein' },
+                  { value: `${targets.carbsG}g`, label: 'carbs' },
+                  { value: `${targets.fatG}g`, label: 'fat' },
+                ].map((s) => (
+                  <View key={s.label} className="items-center">
+                    <Text
+                      className="text-lg font-bold"
+                      style={{ color: colors.textPrimary, fontVariant: ['tabular-nums'] }}
+                    >
+                      {s.value}
+                    </Text>
+                    <Text className="text-xs" style={{ color: colors.textMuted }}>
+                      {s.label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              {trainingDays > 0 && (
+                <Text className="text-xs mt-3 pt-3 border-t" style={{ color: colors.textSecondary, borderColor: colors.gridline }}>
+                  Plus a {trainingDays}-day training week already scheduled for you, with video demos
+                  for every exercise.
+                </Text>
+              )}
+            </View>
+          )}
+
+          <View className="gap-2.5 mb-6">
             {FEATURES.map((f) => (
               <View key={f} className="flex-row items-center gap-2.5">
-                <CheckCircle2 size={18} color={colors.brandPrimary} />
-                <Text className="text-sm flex-1" style={{ color: colors.textPrimary }}>
+                <CheckCircle2 size={16} color={colors.brandPrimary} />
+                <Text className="text-sm flex-1" style={{ color: colors.textSecondary }}>
                   {f}
                 </Text>
               </View>

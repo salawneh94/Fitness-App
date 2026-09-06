@@ -48,6 +48,13 @@
           "photosPermission": "FitTrack uses your photo library to attach progress photos.",
           "cameraPermission": "FitTrack uses the camera to take progress photos."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#22d3ee",
+          "defaultChannel": "streak-reminder"
+        }
       ]
     ],
     "experiments": {

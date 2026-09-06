@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { LogOut, Trash2 } from 'lucide-react-native';
+import { Download, LogOut, Trash2 } from 'lucide-react-native';
 import { ActivityIndicator, Alert, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSyncQueue } from '@/lib/sync-queue';
 import { supabase } from '@/lib/supabase';
+import { shareExport } from '@/lib/export-data';
 import type { ActivityLevel, Goal, Profile, Sex, UnitSystem } from '@fittrack/shared';
 import { ACTIVITY_LABELS, GOAL_LABELS, bmi, planDailyTargets, colors } from '@fittrack/shared';
 import Card from './ui/card';
@@ -17,6 +18,7 @@ import TextField from './ui/text-field';
 import SelectField from './ui/select-field';
 import PressableScale from '@/components/ui/pressable-scale';
 import { SyncStatusLine } from '@/components/sync-status';
+import ReminderCard from './reminder-card';
 
 const GOALS: Goal[] = ['lose_fat', 'build_muscle', 'maintain', 'improve_endurance', 'general_health'];
 const ACTIVITIES: ActivityLevel[] = ['sedentary', 'light', 'moderate', 'active', 'very_active'];
@@ -38,6 +40,22 @@ export default function EditProfileForm() {
   const signOut = useAuthStore((s) => s.signOut);
   const resetLocalData = useAppStore((s) => s.resetLocalData);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const outcome = await shareExport();
+      if (outcome === 'unavailable') {
+        Alert.alert('Sharing unavailable', "This device can't open a share sheet, so the export couldn't be handed off.");
+      } else if (outcome === 'failed') {
+        Alert.alert('Export failed', 'Something went wrong preparing your data. Please try again.');
+      }
+      // 'shared' and 'downloaded' need no alert — the OS already showed the user what happened.
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function handleDeleteAccount() {
     setDeleting(true);
@@ -260,6 +278,8 @@ export default function EditProfileForm() {
             <Text className="text-white font-semibold">Save Changes</Text>
           </PressableScale>
 
+          <ReminderCard />
+
           <Card title="Account">
             {authEmail && (
               <Text className="text-sm" style={{ color: colors.textSecondary }}>
@@ -269,6 +289,23 @@ export default function EditProfileForm() {
             <View className="mt-1 mb-4">
               <SyncStatusLine />
             </View>
+            <PressableScale
+              onPress={handleExport}
+              disabled={exporting}
+              accessibilityRole="button"
+              className="flex-row items-center justify-center gap-2 py-2.5 rounded-lg border mb-2"
+              style={{ borderColor: colors.gridline, opacity: exporting ? 0.5 : 1 }}
+            >
+              {exporting ? (
+                <ActivityIndicator size="small" color={colors.textPrimary} />
+              ) : (
+                <Download size={15} color={colors.textPrimary} />
+              )}
+              <Text className="text-sm font-medium" style={{ color: colors.textPrimary }}>
+                {exporting ? 'Preparing…' : 'Export my data'}
+              </Text>
+            </PressableScale>
+
             <PressableScale
               onPress={() =>
                 Alert.alert('Sign out', 'You can sign back in any time to pick up where you left off.', [

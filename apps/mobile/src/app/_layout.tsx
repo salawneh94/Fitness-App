@@ -11,6 +11,7 @@ import { useEntitlementStore } from '@/store/useEntitlementStore';
 import { useHydrated } from '@/store/useHydrated';
 import { pullRemote } from '@/lib/sync';
 import { useSyncQueue } from '@/lib/sync-queue';
+import { useReminderStore } from '@/store/useReminderStore';
 import OnboardingWizard from '@/components/onboarding-wizard';
 import AuthScreen from '@/components/auth-screen';
 import PaywallScreen from '@/components/paywall-screen';
@@ -57,6 +58,9 @@ export default function RootLayout() {
       void useEntitlementStore.getState().logInAndRefresh(userId);
     }
     void useSyncQueue.getState().flush();
+    // Whether tonight's reminder is still warranted depends on what has been logged, so it is
+    // re-evaluated on the same signals as sync rather than left on a fixed schedule.
+    void useReminderStore.getState().refresh();
 
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
@@ -64,6 +68,7 @@ export default function RootLayout() {
         // app costs one small delta instead of re-downloading the whole history.
         void pullRemote(userId);
         void useSyncQueue.getState().flush();
+        void useReminderStore.getState().refresh();
       }
     });
     return () => subscription.remove();
