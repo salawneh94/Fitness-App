@@ -31,6 +31,18 @@ export function computeStreaks(
   const active = activeDaySet(foodEntries, workoutLogs);
   const today = todayISO();
 
+  // `since` is the profile's creation date, and history can legitimately predate it: reinstall
+  // and sign in again and onboarding writes a profile dated today, then pullRemote restores a
+  // year of entries behind it. The current streak walks the data and doesn't care, but a best
+  // streak and adherence bounded by `since` would then be computed over a window of one day —
+  // producing "current streak 5d / best streak 1d", which is impossible, and "100% logged this
+  // month" off a single day. Anchor to the activity itself so the numbers can't contradict
+  // each other.
+  let effectiveSince = since;
+  for (const day of active) {
+    if (day < effectiveSince) effectiveSince = day;
+  }
+
   // Current streak: walk backwards from today (allow today to be empty-in-progress —
   // start counting from yesterday if today has no activity yet).
   let currentStreak = 0;
@@ -40,10 +52,10 @@ export function computeStreaks(
     cursor = addDays(cursor, -1);
   }
 
-  // Best streak: scan every date between `since` and today.
+  // Best streak: scan every date between the effective start and today.
   let bestStreak = 0;
   let running = 0;
-  let d = since;
+  let d = effectiveSince;
   for (let scanned = 0; d <= today && scanned < MAX_DAYS_SCANNED; scanned++) {
     if (active.has(d)) {
       running++;
@@ -59,7 +71,7 @@ export function computeStreaks(
     let total = 0;
     for (let i = 0; i < windowDays; i++) {
       const date = addDays(today, -i);
-      if (date < since) break;
+      if (date < effectiveSince) break;
       total++;
       if (active.has(date)) count++;
     }
