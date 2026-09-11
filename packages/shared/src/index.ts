@@ -9,3 +9,5 @@ export * from './data/planTemplates';
 export * from './adaptiveTdee';
 export * from './foodHistory';
 export * from './progression';
+export * from './trend';
+export * from './insights';

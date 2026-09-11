@@ -1,5 +1,6 @@
 import type { Profile } from './types';
 import { addDaysISO, calcTDEE } from './calc';
+import { daysBetween, slopePerDay } from './trend';
 
 /** Energy in roughly a kilogram of body mass — same figure planDailyTargets plans against. */
 const KCAL_PER_KG = 7700;
@@ -73,37 +74,6 @@ export interface AdaptiveTDEEUnavailable {
 }
 
 /**
- * Least-squares slope of weight against day offset, in kg/day.
- *
- * Endpoint-to-endpoint would be far simpler and much worse: day-to-day weight swings by 1–2kg
- * on water and glycogen alone, which dwarfs the ~0.25kg/week a plan is actually aiming for, so
- * whichever two days happened to sit at the ends would dominate the answer. Fitting through
- * every weigh-in is what makes the trend mean something.
- */
-function weightSlopeKgPerDay(points: { dayOffset: number; weightKg: number }[]): number {
-  const n = points.length;
-  const meanX = points.reduce((s, p) => s + p.dayOffset, 0) / n;
-  const meanY = points.reduce((s, p) => s + p.weightKg, 0) / n;
-  let numerator = 0;
-  let denominator = 0;
-  for (const p of points) {
-    const dx = p.dayOffset - meanX;
-    numerator += dx * (p.weightKg - meanY);
-    denominator += dx * dx;
-  }
-  return denominator === 0 ? 0 : numerator / denominator;
-}
-
-/**
- * Whole days between two YYYY-MM-DD dates. Date.parse treats a bare date string as UTC midnight,
- * so the difference is exact and independent of the device's timezone — the same reason
- * addDaysISO does its arithmetic in UTC.
- */
-function daysBetween(fromISO: string, toISO: string): number {
-  return Math.round((Date.parse(toISO) - Date.parse(fromISO)) / 86_400_000);
-}
-
-/**
  * Measure what the user actually maintains on, instead of predicting it from their body.
  *
  * Mifflin-St Jeor estimates maintenance from height, weight, age and a self-reported activity
@@ -142,9 +112,8 @@ export function estimateAdaptiveTDEE(
     return { reason: 'span_too_short', shortfall: MIN_SPAN_DAYS - spanDays };
   }
 
-  const slopeKgPerDay = weightSlopeKgPerDay(
-    inWindow.map((w) => ({ dayOffset: daysBetween(first.date, w.date), weightKg: w.weightKg }))
-  );
+  const slopeKgPerDay =
+    slopePerDay(inWindow.map((w) => ({ dayOffset: daysBetween(first.date, w.date), value: w.weightKg }))) ?? 0;
 
   // Intake is only meaningful over the same stretch the weight trend was fitted through —
   // pairing a month of eating with a week of weigh-ins would compare two different periods.

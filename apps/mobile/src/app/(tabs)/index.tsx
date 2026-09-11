@@ -18,6 +18,7 @@ import MicronutrientList from '@/components/micronutrient-list';
 import RestDayBanner from '@/components/rest-day-banner';
 import SyncStatusBanner from '@/components/sync-status';
 import QuickLogCard from '@/components/quick-log-card';
+import InsightsCard from '@/components/insights-card';
 import MotivationalTagline from '@/components/motivational-tagline';
 import Confetti from '@/components/confetti';
 import { useStreakCelebration } from '@/hooks/use-streak-celebration';
@@ -178,6 +179,8 @@ export default function OverviewScreen() {
             </View>
           ) : null}
         </Card>
+
+        <InsightsCard limit={2} />
 
         <QuickLogCard />
 

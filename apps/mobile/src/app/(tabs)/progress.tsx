@@ -19,6 +19,7 @@ import {
 } from '@fittrack/shared';
 import Card from '@/components/ui/card';
 import StatTile from '@/components/ui/stat-tile';
+import InsightsCard from '@/components/insights-card';
 import CountUp from '@/components/ui/count-up';
 import RingGauge from '@/components/charts/ring-gauge';
 import WeightChart from '@/components/charts/weight-chart';
@@ -84,6 +85,8 @@ export default function ProgressScreen() {
             Your consistency, strength, and body trends over time.
           </Text>
         </View>
+
+        <InsightsCard title="What your data says" />
 
         <View className="flex-row flex-wrap gap-3">
           <View style={{ width: '47%' }}>
