@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Clock, Minus, Plus, PlayCircle, Trash2, X, Zap } from 'lucide-react-native';
+import { Clock, Minus, Pencil, Plus, PlayCircle, Trash2, X, Zap } from 'lucide-react-native';
 import { Modal, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
-import type { Exercise, ExerciseLogEntry, ScheduledWorkout, UnitSystem, Weekday } from '@fittrack/shared';
+import type { Exercise, ExerciseLogEntry, ScheduledWorkout, UnitSystem, Weekday, WorkoutLogEntry } from '@fittrack/shared';
 import { EXERCISE_LIBRARY, colors, computeRestDayInsight, displayWeight, toKgFromDisplay, todayISO, weightUnitLabel } from '@fittrack/shared';
 import { randomUUID } from 'expo-crypto';
 import Card from '@/components/ui/card';
@@ -12,6 +12,7 @@ import ExerciseVideoModal from '@/components/exercise-video-modal';
 import GuidedWorkoutPlayer from '@/components/guided-workout-player';
 import TextField from '@/components/ui/text-field';
 import PressableScale from '@/components/ui/pressable-scale';
+import EditWorkoutLogModal from '@/components/edit-workout-log-modal';
 
 const WEEKDAYS: Weekday[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -22,8 +23,10 @@ export default function WorkoutsScreen() {
   const workoutLogs = useAppStore((s) => s.workoutLogs);
   const addWorkoutLog = useAppStore((s) => s.addWorkoutLog);
   const removeWorkoutLog = useAppStore((s) => s.removeWorkoutLog);
+  const updateWorkoutLog = useAppStore((s) => s.updateWorkoutLog);
 
   const [activeDay, setActiveDay] = useState<Weekday | null>(null);
+  const [editingLog, setEditingLog] = useState<WorkoutLogEntry | null>(null);
   const [editingDay, setEditingDay] = useState<Weekday | null>(null);
   const [loggingDay, setLoggingDay] = useState<ScheduledWorkout | null>(null);
   const [playingWorkout, setPlayingWorkout] = useState<ScheduledWorkout | null>(null);
@@ -125,6 +128,14 @@ export default function WorkoutsScreen() {
                       </Text>
                     </View>
                   </View>
+                  <PressableScale
+                    accessibilityLabel={`Edit ${log.workoutName}`}
+                    accessibilityRole="button"
+                    onPress={() => setEditingLog(log)}
+                    className="p-1.5"
+                  >
+                    <Pencil size={15} color={colors.textMuted} />
+                  </PressableScale>
                   <PressableScale accessibilityLabel="Delete workout log" accessibilityRole="button" hapticStyle="warning" onPress={() => removeWorkoutLog(log.id)} className="p-1.5">
                     <Trash2 size={15} color={colors.textMuted} />
                   </PressableScale>
@@ -134,6 +145,15 @@ export default function WorkoutsScreen() {
           )}
         </Card>
       </ScrollView>
+
+      {editingLog && (
+        <EditWorkoutLogModal
+          log={editingLog}
+          unit={profile.unitSystem}
+          onSave={(patch) => updateWorkoutLog(editingLog.id, patch)}
+          onClose={() => setEditingLog(null)}
+        />
+      )}
 
       {activeDay && (
         <DayDetailModal

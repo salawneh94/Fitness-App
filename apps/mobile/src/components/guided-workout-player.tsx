@@ -56,6 +56,29 @@ export default function GuidedWorkoutPlayer({
   /** Weights are stored in kg; the player shows whatever unit the user picked. */
   const fmt = (kg: number) => Math.round(displayWeight(kg, unit) * 10) / 10;
 
+  const setsForExercise = setsByExercise[exercise.id] ?? [];
+
+  // Telling someone to try 72.5kg for 6 and then handing them an empty box is most of the work
+  // with none of the payoff. The fields start on the suggestion, so accepting it is one tap on
+  // the log button and changing it is the same typing it always was.
+  //
+  // Only for the first set of an exercise: once they've logged one, logSet carries their actual
+  // numbers forward instead, because set two is nearly always the same weight as set one rather
+  // than whatever was suggested before the session started.
+  useEffect(() => {
+    if (setsForExercise.length > 0) return;
+    if (!suggestion) {
+      setDraftWeight('');
+      setDraftReps('');
+      return;
+    }
+    setDraftWeight(suggestion.weightKg > 0 ? String(fmt(suggestion.weightKg)) : '');
+    setDraftReps(String(suggestion.targetReps));
+    // Keyed on the exercise, not on `suggestion`: re-running whenever the memo re-computes would
+    // overwrite whatever the user had started typing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exercise.id]);
+
   useEffect(() => {
     if (!running) return;
     const id = setInterval(() => setElapsedSec(Math.round((Date.now() - startedAtRef.current) / 1000)), 1000);
@@ -80,8 +103,9 @@ export default function GuidedWorkoutPlayer({
       ...prev,
       [exercise.id]: [...(prev[exercise.id] ?? []), { weightKg, reps }],
     }));
-    setDraftWeight('');
-    setDraftReps('');
+    // The drafts are deliberately left alone rather than cleared: the next set is nearly always
+    // the same weight, so emptying the fields would just ask them to retype what they entered
+    // twenty seconds ago.
     setRestSeconds(restDuration);
     setResting(true);
   }
@@ -102,8 +126,6 @@ export default function GuidedWorkoutPlayer({
     setRestSeconds(null);
     setExerciseIndex((i) => Math.max(0, i - 1));
   }
-
-  const setsForExercise = setsByExercise[exercise.id] ?? [];
 
   if (showFinish) {
     return (

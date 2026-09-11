@@ -56,6 +56,8 @@ interface AppState {
 
   setScheduledWorkouts: (workouts: ScheduledWorkout[]) => void;
   addWorkoutLog: (entry: Omit<WorkoutLogEntry, 'id'>) => void;
+  /** Correct a session after the fact — a mistyped weight shouldn't mean re-entering the lot. */
+  updateWorkoutLog: (id: string, patch: Partial<Omit<WorkoutLogEntry, 'id'>>) => void;
   removeWorkoutLog: (id: string) => void;
 
   addProgressPhoto: (photo: Omit<ProgressPhoto, 'id'>) => string;
@@ -201,6 +203,21 @@ export const useAppStore = create<AppState>()(
         set((state) => ({ workoutLogs: [...state.workoutLogs, full] }));
         const userId = currentUserId();
         if (userId) push.workoutLog(userId, full);
+      },
+
+      updateWorkoutLog: (id, patch) => {
+        let updated: WorkoutLogEntry | undefined;
+        set((state) => ({
+          workoutLogs: state.workoutLogs.map((e) => {
+            if (e.id !== id) return e;
+            updated = { ...e, ...patch };
+            return updated;
+          }),
+        }));
+        // The remote write is an upsert keyed on the same id, so an edit needs no plumbing of
+        // its own — it's the identical push the original log made.
+        const userId = currentUserId();
+        if (userId && updated) push.workoutLog(userId, updated);
       },
 
       removeWorkoutLog: (id) => {

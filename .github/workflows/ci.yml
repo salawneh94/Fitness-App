@@ -1,0 +1,47 @@
+name: CI
+
+# Runs on every push and every pull request, on any branch. The point of a test suite that
+# covers calorie targets and insight thresholds is that nobody has to remember to run it —
+# including the person who wrote it.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  # A new push supersedes an in-flight run on the same ref; nobody needs the old answer.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      # --frozen-lockfile so a drifted lockfile fails here rather than silently resolving to
+      # something different from what anyone tested locally.
+      - run: pnpm install --frozen-lockfile
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Typecheck shared + mobile
+        run: pnpm --filter mobile exec tsc --noEmit
+
+      - name: Typecheck + build web
+        run: pnpm --filter web build
+
+      # The bundle is where the pnpm/Metro resolution failures show up — a change can typecheck
+      # perfectly and still not bundle, which is how several of this project's breakages started.
+      # iOS alone is enough to catch that class; all three platforms would triple the runtime for
+      # very little extra signal.
+      - name: Bundle for iOS
+        run: pnpm --filter mobile exec expo export --platform ios --output-dir /tmp/ci-export
+        env:
+          EXPO_NO_TELEMETRY: '1'

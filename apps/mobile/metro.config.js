@@ -46,10 +46,26 @@ const WEB_ONLY_MODULES = [
 const emptyModulePath = path.resolve(projectRoot, 'metro-empty-module.js');
 const defaultResolveRequest = config.resolver.resolveRequest;
 
+// Sentry costs roughly 2MB of JS bundle on every platform. Crash reporting is worth that when
+// it's switched on — but with no DSN configured, initCrashReporting and reportError both return
+// immediately and the SDK is never touched, so an unconfigured build would be paying 2MB for a
+// feature that does nothing. Stubbing it out in that case keeps the cost proportional to the
+// feature actually being on.
+//
+// Safe for the same reason as the list above: src/lib/crash-reporting.ts only ever dereferences
+// Sentry inside function bodies, never at module scope, so an empty module is never touched.
+const sentryConfigured = Boolean(process.env.EXPO_PUBLIC_SENTRY_DSN);
+
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (
     platform !== 'web' &&
     WEB_ONLY_MODULES.some((name) => moduleName === name || moduleName.startsWith(`${name}/`))
+  ) {
+    return { type: 'sourceFile', filePath: emptyModulePath };
+  }
+  if (
+    !sentryConfigured &&
+    (moduleName === '@sentry/react-native' || moduleName.startsWith('@sentry/react-native/'))
   ) {
     return { type: 'sourceFile', filePath: emptyModulePath };
   }

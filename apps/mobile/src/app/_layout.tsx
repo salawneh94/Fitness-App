@@ -11,12 +11,16 @@ import { useEntitlementStore } from '@/store/useEntitlementStore';
 import { useHydrated } from '@/store/useHydrated';
 import { pullRemote } from '@/lib/sync';
 import { useSyncQueue } from '@/lib/sync-queue';
+import { initCrashReporting } from '@/lib/crash-reporting';
 import { useReminderStore } from '@/store/useReminderStore';
 import OnboardingWizard from '@/components/onboarding-wizard';
 import AuthScreen from '@/components/auth-screen';
 import PaywallScreen from '@/components/paywall-screen';
 
 SplashScreen.preventAutoHideAsync();
+
+// Before anything else renders, so a crash during the first paint is still captured.
+initCrashReporting();
 
 // Expo Router mounts this around everything below the root route, so any render that throws
 // lands on a recoverable screen instead of a blank one.

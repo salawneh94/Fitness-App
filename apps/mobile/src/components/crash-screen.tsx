@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AlertTriangle } from 'lucide-react-native';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ErrorBoundaryProps } from 'expo-router';
 import { colors } from '@fittrack/shared';
 import { useSyncQueue } from '@/lib/sync-queue';
+import { reportError } from '@/lib/crash-reporting';
 import PressableScale from '@/components/ui/pressable-scale';
 
 /**
@@ -23,6 +24,14 @@ import PressableScale from '@/components/ui/pressable-scale';
 export default function CrashScreen({ error, retry }: ErrorBoundaryProps) {
   const pending = useSyncQueue((s) => s.pendingOps.length);
   const [details, setDetails] = useState(false);
+
+  // Expo Router catches the throw before it reaches any global handler, so without this the
+  // errors users actually hit would be the only ones Sentry never sees.
+  useEffect(() => {
+    reportError(error, { boundary: 'root', pendingSyncOps: pending });
+    // Report each distinct failure once, not again on every re-render of this screen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error]);
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>

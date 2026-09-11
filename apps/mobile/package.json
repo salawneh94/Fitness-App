@@ -12,6 +12,7 @@
     "@react-native-picker/picker": "^2.11.4",
     "@revenuecat/purchases-js-hybrid-mappings": "^18.35.0",
     "@revenuecat/purchases-typescript-internal": "^18.35.0",
+    "@sentry/react-native": "8.26.0",
     "@supabase/auth-js": "^2.114.0",
     "@supabase/functions-js": "^2.114.0",
     "@supabase/phoenix": "^0.4.5",

@@ -55,7 +55,8 @@
           "color": "#22d3ee",
           "defaultChannel": "streak-reminder"
         }
-      ]
+      ],
+      "@sentry/react-native/expo"
     ],
     "experiments": {
       "typedRoutes": true,
