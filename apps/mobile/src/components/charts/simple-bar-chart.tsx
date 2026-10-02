@@ -43,7 +43,9 @@ export default function SimpleBarChart({
 
   const ticks = [0, top / 2, top];
 
-  const maxLabels = Math.max(2, Math.floor(innerW / 40));
+  const maxLabels = Math.max(2, Math.floor(innerW / 48));
+  // Counted back from the newest bar, so the latest label is always shown and spacing stays even —
+  // forcing the last label on top of a stepped series made the final two collide.
   const labelStep = Math.ceil(data.length / maxLabels);
 
   return (
@@ -97,7 +99,7 @@ export default function SimpleBarChart({
           <Line x1={PAD.left} x2={width - PAD.right} y1={PAD.top + innerH} y2={PAD.top + innerH} stroke={colors.baseline} strokeWidth={1} />
 
           {data.map((d, i) =>
-            i % labelStep === 0 || i === data.length - 1 ? (
+            (data.length - 1 - i) % labelStep === 0 ? (
               <SvgText key={`l${i}`} x={PAD.left + slot * i + slot / 2} y={HEIGHT - 6} textAnchor="middle" fontSize={11} fill={colors.textMuted}>
                 {d.label}
               </SvgText>
