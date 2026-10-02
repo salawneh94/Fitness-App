@@ -1,8 +1,18 @@
 import { useState } from 'react';
 import { Minus, X } from 'lucide-react-native';
 import { Modal, ScrollView, Text, View } from 'react-native';
-import type { ExerciseLogEntry, UnitSystem, WorkoutLogEntry } from '@fittrack/shared';
-import { colors, displayWeight, parseISODate, toKgFromDisplay, weightUnitLabel } from '@fittrack/shared';
+import type { CardioEntry, ExerciseLogEntry, UnitSystem, WorkoutLogEntry } from '@fittrack/shared';
+import {
+  CARDIO_ACTIVITIES,
+  colors,
+  displayDistance,
+  displayWeight,
+  distanceUnitLabel,
+  parseISODate,
+  toKgFromDisplay,
+  toKmFromDisplay,
+  weightUnitLabel,
+} from '@fittrack/shared';
 import TextField from './ui/text-field';
 import PressableScale from '@/components/ui/pressable-scale';
 
@@ -43,6 +53,14 @@ export default function EditWorkoutLogModal({
   const [durationMin, setDurationMin] = useState(String(log.durationMin));
   const [caloriesBurned, setCaloriesBurned] = useState(log.caloriesBurned ? String(log.caloriesBurned) : '');
   const [notes, setNotes] = useState(log.notes ?? '');
+  // Cardio is edited as minutes and distance, in the user's distance unit.
+  const [cardio, setCardio] = useState(
+    (log.cardio ?? []).map((c) => ({
+      entry: c,
+      minutes: String(c.durationMin),
+      distance: c.distanceKm ? String(Math.round(displayDistance(c.distanceKm, unit) * 100) / 100) : '',
+    }))
+  );
   const [exercises, setExercises] = useState<{ entry: ExerciseLogEntry; sets: DraftSet[] }[]>(
     (log.exerciseLogs ?? []).map((entry) => ({
       entry,
@@ -79,7 +97,16 @@ export default function EditWorkoutLogModal({
       // An exercise whose every set was deleted is an exercise that didn't happen.
       .filter((e) => e.sets.length > 0);
 
+    const cardioEntries: CardioEntry[] = cardio
+      .map(({ entry, minutes, distance }) => ({
+        activity: entry.activity,
+        durationMin: Number(minutes) || 0,
+        distanceKm: distance === '' ? undefined : toKmFromDisplay(Number(distance) || 0, unit) || undefined,
+      }))
+      .filter((c) => c.durationMin > 0);
+
     onSave({
+      ...(log.cardio ? { cardio: cardioEntries.length > 0 ? cardioEntries : undefined } : {}),
       durationMin: Math.max(1, Number(durationMin) || 1),
       caloriesBurned: caloriesBurned === '' ? undefined : Number(caloriesBurned) || undefined,
       notes: notes.trim() === '' ? undefined : notes.trim(),
@@ -120,6 +147,35 @@ export default function EditWorkoutLogModal({
               />
             </View>
           </View>
+
+          {cardio.map((c, i) => (
+            <View key={i} className="mb-5">
+              <Text className="text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
+                {CARDIO_ACTIVITIES.find((a) => a.id === c.entry.activity)?.label ?? 'Cardio'}
+              </Text>
+              <View className="flex-row gap-3">
+                <View className="flex-1">
+                  <FieldLabel>Minutes</FieldLabel>
+                  <TextField
+                    keyboardType="numeric"
+                    value={c.minutes}
+                    accessibilityLabel="Cardio minutes"
+                    onChangeText={(minutes) => setCardio((prev) => prev.map((x, j) => (j === i ? { ...x, minutes } : x)))}
+                  />
+                </View>
+                <View className="flex-1">
+                  <FieldLabel>Distance ({distanceUnitLabel(unit)})</FieldLabel>
+                  <TextField
+                    keyboardType="decimal-pad"
+                    value={c.distance}
+                    placeholder="optional"
+                    accessibilityLabel="Cardio distance"
+                    onChangeText={(distance) => setCardio((prev) => prev.map((x, j) => (j === i ? { ...x, distance } : x)))}
+                  />
+                </View>
+              </View>
+            </View>
+          ))}
 
           {exercises.map((ex, exIndex) => (
             <View key={ex.entry.exerciseId} className="mb-5">

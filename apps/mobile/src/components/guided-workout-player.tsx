@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronLeft, ChevronRight, Pause, Play, PlayCircle, Plus, Repeat, SkipForward, Trophy, X } from 'lucide-react-native';
 import { Modal, ScrollView, Text, View } from 'react-native';
-import type { Exercise, ExerciseLogEntry, PersonalRecord, ScheduledWorkout, UnitSystem } from '@fittrack/shared';
+import type { CardioEntry, Exercise, ExerciseLogEntry, PersonalRecord, ScheduledWorkout, UnitSystem } from '@fittrack/shared';
 import { colors, displayWeight, toKgFromDisplay, weightUnitLabel } from '@fittrack/shared';
 import {
   EXERCISE_LIBRARY,
+  activityForExercise,
+  cardioRecords,
+  distanceUnitLabel,
+  formatDistance,
+  formatPace,
+  toKmFromDisplay,
   deloadWeight,
   findPersonalRecords,
   lastPerformance,
@@ -34,7 +40,13 @@ export default function GuidedWorkoutPlayer({
 }: {
   workout: ScheduledWorkout;
   unit: UnitSystem;
-  onFinish: (durationMin: number, exerciseLogs: ExerciseLogEntry[], caloriesBurned: number | undefined, notes: string | undefined) => void;
+  onFinish: (
+    durationMin: number,
+    exerciseLogs: ExerciseLogEntry[],
+    caloriesBurned: number | undefined,
+    notes: string | undefined,
+    cardio: CardioEntry[]
+  ) => void;
   onCancel: () => void;
 }) {
   const [exerciseIndex, setExerciseIndex] = useState(0);
@@ -50,6 +62,10 @@ export default function GuidedWorkoutPlayer({
 
   const [draftWeight, setDraftWeight] = useState('');
   const [draftReps, setDraftReps] = useState('');
+  // Cardio exercises are logged as time and distance, not sets — one entry per exercise.
+  const [cardioByExercise, setCardioByExercise] = useState<Record<string, CardioEntry>>({});
+  const [draftMinutes, setDraftMinutes] = useState('');
+  const [draftDistance, setDraftDistance] = useState('');
   const [showVideo, setShowVideo] = useState(false);
 
   // The session's own copy, so an exercise can be swapped for today without touching the plan.
@@ -87,6 +103,25 @@ export default function GuidedWorkoutPlayer({
   const fmt = (kg: number) => Math.round(displayWeight(kg, unit) * 10) / 10;
 
   const setsForExercise = setsByExercise[exercise.id] ?? [];
+  const isCardio = exercise.category === 'cardio';
+  const cardioLogged = cardioByExercise[exercise.id];
+  const lastCardio = useMemo(() => {
+    if (!isCardio) return null;
+    const activity = activityForExercise(exercise.id);
+    const recent = [...workoutLogs].sort((a, b) => b.date.localeCompare(a.date));
+    for (const w of recent) {
+      const c = w.cardio?.find((x) => x.activity === activity);
+      if (c) return c;
+    }
+    return null;
+  }, [isCardio, exercise.id, workoutLogs]);
+
+  function logCardio() {
+    const durationMin = Number(draftMinutes) || 0;
+    if (durationMin <= 0) return;
+    const km = draftDistance === '' ? undefined : toKmFromDisplay(Number(draftDistance) || 0, unit) || undefined;
+    setCardioByExercise((prev) => ({ ...prev, [exercise.id]: { activity: activityForExercise(exercise.id), durationMin, distanceKm: km } }));
+  }
 
   // Telling someone to try 72.5kg for 6 and then handing them an empty box is most of the work
   // with none of the payoff. The fields start on the suggestion, so accepting it is one tap on
@@ -194,14 +229,17 @@ export default function GuidedWorkoutPlayer({
     const exerciseLogs: ExerciseLogEntry[] = exercises
       .filter((ex) => (setsByExercise[ex.id] ?? []).length > 0)
       .map((ex) => ({ exerciseId: ex.id, exerciseName: ex.name, sets: setsByExercise[ex.id] }));
+    const cardio = exercises.map((e) => cardioByExercise[e.id]).filter((c): c is CardioEntry => c !== undefined);
+    const distanceKm = cardio.reduce((s, c) => s + (c.distanceKm ?? 0), 0);
     return (
       <FinishScreen
         durationMin={Math.max(1, Math.round(elapsedSec / 60))}
         setsByExercise={setsByExercise}
         workout={workout}
-        records={findPersonalRecords(exerciseLogs, workoutLogs, unit)}
+        distanceLabel={distanceKm > 0 ? formatDistance(distanceKm, unit) : null}
+        records={[...findPersonalRecords(exerciseLogs, workoutLogs, unit), ...cardioRecords(cardio, workoutLogs, unit)]}
         onSave={(caloriesBurned, notes) => {
-          onFinish(Math.max(1, Math.round(elapsedSec / 60)), exerciseLogs, caloriesBurned, notes);
+          onFinish(Math.max(1, Math.round(elapsedSec / 60)), exerciseLogs, caloriesBurned, notes, cardio);
         }}
         onBack={() => setShowFinish(false)}
       />
@@ -260,7 +298,9 @@ export default function GuidedWorkoutPlayer({
             </>
           ) : (
             <View className="items-center w-full">
-              <Text className="text-xs uppercase tracking-wide text-white/50 mb-2">{exercise.equipment}</Text>
+              {exercise.equipment !== 'None' && (
+                <Text className="text-xs uppercase tracking-wide text-white/50 mb-2">{exercise.equipment}</Text>
+              )}
               <Text className="text-3xl font-bold text-white mb-3 text-center">{exercise.name}</Text>
               <Text className="text-white/60 mb-6 text-center">
                 {exercise.sets && exercise.reps ? `${exercise.sets} sets × ${exercise.reps}` : exercise.notes ?? 'Log your sets below'}
@@ -274,7 +314,7 @@ export default function GuidedWorkoutPlayer({
                 </PressableScale>
                 {/* Only before the first set: swapping half-way through would split one
                     exercise's sets across two. */}
-                {setsForExercise.length === 0 && hasAlternatives && (
+                {setsForExercise.length === 0 && !cardioLogged && hasAlternatives && (
                   <PressableScale
                     accessibilityRole="button"
                     accessibilityLabel={`Swap ${exercise.name}`}
@@ -317,7 +357,7 @@ export default function GuidedWorkoutPlayer({
                               >
                                 <View className="flex-1 min-w-0">
                                   <Text className="text-sm font-medium text-white" numberOfLines={1}>{alt.name}</Text>
-                                  <Text className="text-xs text-white/50">{alt.equipment} · {alt.reps}</Text>
+                                  <Text className="text-xs text-white/50">{alt.equipment}{alt.reps ? ` · ${alt.reps}` : alt.notes ? ` · ${alt.notes}` : ''}</Text>
                                 </View>
                                 {chosen && <Check size={16} color="#22d3ee" />}
                               </PressableScale>
@@ -359,6 +399,54 @@ export default function GuidedWorkoutPlayer({
               )}
               {showVideo && <ExerciseVideoModal exercise={exercise} onClose={() => setShowVideo(false)} />}
 
+              {isCardio ? (
+                cardioLogged ? (
+                  <View className="flex-row items-center gap-1.5 bg-white/10 rounded-full px-4 py-2" accessibilityLabel="Cardio logged">
+                    <Check size={14} color="#22d3ee" />
+                    <Text className="text-sm text-white">
+                      {cardioLogged.durationMin} min
+                      {cardioLogged.distanceKm ? ` · ${formatDistance(cardioLogged.distanceKm, unit)}` : ''}
+                      {formatPace(cardioLogged, unit) ? ` · ${formatPace(cardioLogged, unit)}` : ''}
+                    </Text>
+                  </View>
+                ) : (
+                  <View className="items-center w-full">
+                    {lastCardio && (
+                      <Text className="text-xs text-white/50 mb-3">
+                        Last time: {lastCardio.durationMin} min
+                        {lastCardio.distanceKm ? ` · ${formatDistance(lastCardio.distanceKm, unit)}` : ''}
+                        {formatPace(lastCardio, unit) ? ` · ${formatPace(lastCardio, unit)}` : ''}
+                      </Text>
+                    )}
+                    <View className="flex-row items-center gap-2">
+                      <TextField
+                        className="w-24 text-center"
+                        maxFontSizeMultiplier={1.3}
+                        keyboardType="numeric"
+                        placeholder="min"
+                        accessibilityLabel="Minutes"
+                        value={draftMinutes}
+                        onChangeText={setDraftMinutes}
+                        style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.2)', color: 'white' }}
+                      />
+                      <TextField
+                        className="w-24 text-center"
+                        maxFontSizeMultiplier={1.3}
+                        keyboardType="decimal-pad"
+                        placeholder={distanceUnitLabel(unit)}
+                        accessibilityLabel={`Distance in ${distanceUnitLabel(unit)}`}
+                        value={draftDistance}
+                        onChangeText={setDraftDistance}
+                        style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.2)', color: 'white' }}
+                      />
+                      <PressableScale accessibilityLabel="Log cardio" accessibilityRole="button" hapticStyle="success" onPress={logCardio} className="w-11 h-11 rounded-full bg-cyan-600 items-center justify-center">
+                        <Check size={20} color="white" />
+                      </PressableScale>
+                    </View>
+                  </View>
+                )
+              ) : (
+              <>
               {setsForExercise.length > 0 && (
                 <View className="flex-row flex-wrap justify-center gap-2 mb-6">
                   {setsForExercise.map((s, i) => (
@@ -447,6 +535,8 @@ export default function GuidedWorkoutPlayer({
                   <Plus size={20} color="white" />
                 </PressableScale>
               </View>
+              </>
+              )}
             </View>
           )}
         </View>
@@ -476,6 +566,7 @@ function FinishScreen({
   setsByExercise,
   workout,
   records,
+  distanceLabel,
   onSave,
   onBack,
 }: {
@@ -483,6 +574,7 @@ function FinishScreen({
   setsByExercise: Record<string, { weightKg: number; reps: number }[]>;
   workout: ScheduledWorkout;
   records: PersonalRecord[];
+  distanceLabel: string | null;
   onSave: (caloriesBurned: number | undefined, notes: string | undefined) => void;
   onBack: () => void;
 }) {
@@ -501,10 +593,18 @@ function FinishScreen({
             <Text className="text-2xl font-bold text-white">{durationMin}</Text>
             <Text className="text-xs text-white/50">minutes</Text>
           </View>
-          <View className="items-center">
-            <Text className="text-2xl font-bold text-white">{totalSets}</Text>
-            <Text className="text-xs text-white/50">sets logged</Text>
-          </View>
+          {totalSets > 0 && (
+            <View className="items-center">
+              <Text className="text-2xl font-bold text-white">{totalSets}</Text>
+              <Text className="text-xs text-white/50">{totalSets === 1 ? 'set' : 'sets'} logged</Text>
+            </View>
+          )}
+          {distanceLabel && (
+            <View className="items-center">
+              <Text className="text-2xl font-bold text-white">{distanceLabel.split(' ')[0]}</Text>
+              <Text className="text-xs text-white/50">{distanceLabel.split(' ')[1]}</Text>
+            </View>
+          )}
         </View>
         {/* The moment that makes training feel like it's working — every set needed to notice it
             was already being logged. */}

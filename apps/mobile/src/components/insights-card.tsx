@@ -18,6 +18,7 @@ import {
 import { useAppStore } from '@/store/useAppStore';
 import { useAdaptiveTargets } from '@/hooks/use-adaptive-targets';
 import AddFoodModal from './add-food-modal';
+import LogCardioModal from './log-cardio-modal';
 import Card from './ui/card';
 import PressableScale from './ui/pressable-scale';
 
@@ -40,10 +41,12 @@ function InsightRow({
   insight,
   unit,
   onProteinFoods,
+  onLogCardio,
 }: {
   insight: Insight;
   unit: UnitSystem;
   onProteinFoods: () => void;
+  onLogCardio: () => void;
 }) {
   const { icon: Icon, color, tint } = TONE[insight.tone];
   const router = useRouter();
@@ -95,6 +98,8 @@ function InsightRow({
                       startDeload({ exerciseId: action.exerciseId, stalledKg: action.stalledKg, deloadKg: action.deloadKg });
                     } else if (action.kind === 'protein_foods') {
                       onProteinFoods();
+                    } else if (action.kind === 'log_cardio') {
+                      onLogCardio();
                     } else {
                       router.push('/plans');
                     }
@@ -143,6 +148,7 @@ export default function InsightsCard({ title = 'What we noticed', limit }: { tit
   const insightSnoozes = useAppStore((s) => s.insightSnoozes);
   const { adaptive, measured } = useAdaptiveTargets(profile!);
   const [foodSheet, setFoodSheet] = useState<MealType | null>(null);
+  const [cardioSheet, setCardioSheet] = useState(false);
 
   const insights = useMemo(() => {
     if (!profile) return [];
@@ -175,11 +181,13 @@ export default function InsightsCard({ title = 'What we noticed', limit }: { tit
               insight={insight}
               unit={profile.unitSystem}
               onProteinFoods={() => setFoodSheet(mealForNow())}
+              onLogCardio={() => setCardioSheet(true)}
             />
           ))}
         </View>
       </Card>
       {foodSheet && <AddFoodModal meal={foodSheet} highlight="protein" onClose={() => setFoodSheet(null)} />}
+      {cardioSheet && <LogCardioModal onClose={() => setCardioSheet(false)} />}
     </>
   );
 }

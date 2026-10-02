@@ -133,6 +133,15 @@ export interface ExerciseLogEntry {
   sets: SetEntry[];
 }
 
+export type CardioActivity = 'run' | 'walk' | 'cycle' | 'row' | 'swim' | 'other';
+
+/** One stretch of cardio: what, how long, and (optionally) how far. Distance is stored in km. */
+export interface CardioEntry {
+  activity: CardioActivity;
+  durationMin: number;
+  distanceKm?: number;
+}
+
 export interface WorkoutLogEntry {
   id: string;
   date: string; // ISO date
@@ -141,6 +150,7 @@ export interface WorkoutLogEntry {
   caloriesBurned?: number;
   notes?: string;
   exerciseLogs?: ExerciseLogEntry[];
+  cardio?: CardioEntry[];
 }
 
 export interface WorkoutPlanTemplate {

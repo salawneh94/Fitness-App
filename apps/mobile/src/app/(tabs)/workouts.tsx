@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Clock, Minus, Pencil, Plus, PlayCircle, Trash2, Trophy, X, Zap } from 'lucide-react-native';
+import { Clock, Footprints, Minus, Pencil, Plus, PlayCircle, Trash2, Trophy, X, Zap } from 'lucide-react-native';
 import { Modal, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
@@ -9,6 +9,8 @@ import {
   colors,
   computeRestDayInsight,
   displayWeight,
+  formatDistance,
+  formatPace,
   parseISODate,
   recordsForLog,
   toKgFromDisplay,
@@ -23,6 +25,7 @@ import GuidedWorkoutPlayer from '@/components/guided-workout-player';
 import TextField from '@/components/ui/text-field';
 import PressableScale from '@/components/ui/pressable-scale';
 import EditWorkoutLogModal from '@/components/edit-workout-log-modal';
+import LogCardioModal from '@/components/log-cardio-modal';
 
 const WEEKDAYS: Weekday[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -40,6 +43,7 @@ export default function WorkoutsScreen() {
   const [editingDay, setEditingDay] = useState<Weekday | null>(null);
   const [loggingDay, setLoggingDay] = useState<ScheduledWorkout | null>(null);
   const [playingWorkout, setPlayingWorkout] = useState<ScheduledWorkout | null>(null);
+  const [loggingCardio, setLoggingCardio] = useState(false);
 
   const workoutForDay = (day: Weekday) => scheduledWorkouts.find((w) => w.day === day);
 
@@ -81,6 +85,25 @@ export default function WorkoutsScreen() {
         </View>
 
         {restInsight.shouldRest && <RestDayBanner consecutiveDays={restInsight.consecutiveTrainedDays} />}
+
+        <PressableScale
+          hapticStyle="selection"
+          accessibilityRole="button"
+          onPress={() => setLoggingCardio(true)}
+          className="flex-row items-center gap-3 p-4 rounded-2xl border"
+          style={{ borderColor: colors.gridline, backgroundColor: colors.chartSurface }}
+        >
+          <Footprints size={20} color={colors.brandPrimary} />
+          <View className="flex-1">
+            <Text className="text-sm font-semibold" style={{ color: colors.textPrimary }}>
+              Log cardio
+            </Text>
+            <Text className="text-xs" style={{ color: colors.textMuted }}>
+              Run, walk, ride, row or swim — with distance and pace
+            </Text>
+          </View>
+          <Plus size={18} color={colors.textMuted} />
+        </PressableScale>
 
         <View className="flex-row flex-wrap gap-2.5">
           {WEEKDAYS.map((day) => {
@@ -158,6 +181,13 @@ export default function WorkoutsScreen() {
                         {log.durationMin} min ·{' '}
                         {parseISODate(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                         {log.caloriesBurned ? ` · ${log.caloriesBurned} kcal` : ''}
+                        {log.cardio && log.cardio.length > 0
+                          ? log.cardio
+                              .map((c) => [c.distanceKm ? formatDistance(c.distanceKm, profile.unitSystem) : null, formatPace(c, profile.unitSystem)].filter(Boolean).join(' · '))
+                              .filter(Boolean)
+                              .map((t) => ` · ${t}`)
+                              .join('')
+                          : ''}
                         {log.exerciseLogs && log.exerciseLogs.length > 0
                           ? ` · ${(() => {
                               const n = log.exerciseLogs.reduce((s, e) => s + e.sets.length, 0);
@@ -235,13 +265,23 @@ export default function WorkoutsScreen() {
         />
       )}
 
+      {loggingCardio && <LogCardioModal onClose={() => setLoggingCardio(false)} />}
+
       {playingWorkout && (
         <GuidedWorkoutPlayer
           workout={playingWorkout}
           unit={profile.unitSystem}
           onCancel={() => setPlayingWorkout(null)}
-          onFinish={(durationMin, exerciseLogs, caloriesBurned, notes) => {
-            addWorkoutLog({ date: todayISO(), workoutName: playingWorkout.name, durationMin, caloriesBurned, notes, exerciseLogs });
+          onFinish={(durationMin, exerciseLogs, caloriesBurned, notes, cardio) => {
+            addWorkoutLog({
+              date: todayISO(),
+              workoutName: playingWorkout.name,
+              durationMin,
+              caloriesBurned,
+              notes,
+              exerciseLogs,
+              cardio: cardio.length > 0 ? cardio : undefined,
+            });
             setPlayingWorkout(null);
           }}
         />

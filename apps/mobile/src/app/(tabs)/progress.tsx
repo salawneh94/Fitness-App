@@ -27,6 +27,7 @@ import WeightChart from '@/components/charts/weight-chart';
 import StrengthChart from '@/components/charts/strength-chart';
 import CalorieTrendChart from '@/components/charts/calorie-trend-chart';
 import MeasurementsCard from '@/components/measurements-card';
+import CardioCard from '@/components/cardio-card';
 import PhotoCompareSlider from '@/components/photo-compare-slider';
 import { deletePhotoFile, getPhotoUri, savePhotoFromUri } from '@/lib/photo-store';
 import PressableScale from '@/components/ui/pressable-scale';
@@ -147,6 +148,8 @@ export default function ProgressScreen() {
         <Card title="Weight Trend">
           <WeightChart data={weightHistory} unit={profile.unitSystem} />
         </Card>
+
+        <CardioCard profile={profile} workoutLogs={workoutLogs} />
 
         <MeasurementsCard unit={profile.unitSystem} />
 

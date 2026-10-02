@@ -16,3 +16,4 @@ export * from './data/genericFoods';
 export * from './water';
 export * from './planProgress';
 export * from './records';
+export * from './cardio';

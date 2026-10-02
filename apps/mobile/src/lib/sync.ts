@@ -264,6 +264,7 @@ function workoutLogToRow(userId: string, log: WorkoutLogEntry) {
     calories_burned: log.caloriesBurned ?? null,
     notes: log.notes ?? null,
     exercise_logs: log.exerciseLogs ?? null,
+    cardio: log.cardio && log.cardio.length > 0 ? log.cardio : null,
   };
 }
 
@@ -276,6 +277,7 @@ function workoutLogFromRow(row: Record<string, any>): WorkoutLogEntry {
     caloriesBurned: row.calories_burned ?? undefined,
     notes: row.notes ?? undefined,
     exerciseLogs: row.exercise_logs ?? undefined,
+    cardio: row.cardio ?? undefined,
   };
 }
 

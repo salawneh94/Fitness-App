@@ -1,6 +1,7 @@
 import type { ExerciseLogEntry, SetEntry, UnitSystem, WorkoutLogEntry } from './types';
 import { estimate1RM } from './calc';
 import { displayWeight, weightUnitLabel } from './units';
+import { cardioRecords } from './cardio';
 
 /**
  * Past this many reps, Epley's 1RM estimate stops meaning much — 25 reps at 40 kg "estimates" a
@@ -10,7 +11,7 @@ const MAX_REPS_FOR_ESTIMATE = 12;
 /** An estimated-1RM gain smaller than this is rounding noise, not a record. */
 const MIN_E1RM_GAIN = 0.005;
 
-export type RecordKind = 'heaviest' | 'best_set' | 'most_reps';
+export type RecordKind = 'heaviest' | 'best_set' | 'most_reps' | 'longest' | 'fastest';
 
 export interface PersonalRecord {
   exerciseId: string;
@@ -120,5 +121,6 @@ export function findPersonalRecords(session: ExerciseLogEntry[], history: Workou
 
 /** Records set by a logged session, judged against everything logged on earlier days. */
 export function recordsForLog(log: WorkoutLogEntry, all: WorkoutLogEntry[], unit: UnitSystem): PersonalRecord[] {
-  return findPersonalRecords(log.exerciseLogs ?? [], all.filter((w) => w.date < log.date), unit);
+  const before = all.filter((w) => w.date < log.date);
+  return [...findPersonalRecords(log.exerciseLogs ?? [], before, unit), ...cardioRecords(log.cardio ?? [], before, unit)];
 }

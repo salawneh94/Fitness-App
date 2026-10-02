@@ -6,6 +6,7 @@ import { findExercise } from './data/exercises';
 import { displayWeight, weightUnitLabel } from './units';
 import { PLAN_TEMPLATES } from './data/planTemplates';
 import { planBlock } from './planProgress';
+import { cardioMinutes } from './cardio';
 
 /** Matches the adaptive-TDEE window, so the two features never describe different periods. */
 export const INSIGHT_WINDOW_DAYS = 28;
@@ -32,6 +33,11 @@ const MAX_SAFE_LOSS_RATE = 0.01;
 const STALL_KG_PER_WEEK = 0.1;
 /** Adherence worth congratulating. */
 const STRONG_ADHERENCE = 0.8;
+/** WHO's baseline for adults: 150 minutes of moderate aerobic activity a week. */
+const CARDIO_BASELINE_MIN_PER_WEEK = 150;
+/** Two weeks — long enough that one busy week doesn't trigger it. */
+const CARDIO_WINDOW_DAYS = 14;
+
 /** Share of a block's sessions that must actually have been trained to call the block finished. */
 const MIN_BLOCK_ADHERENCE = 0.5;
 
@@ -44,6 +50,7 @@ export type InsightId =
   | 'lift_stalled'
   | 'sleep_short'
   | 'plan_complete'
+  | 'cardio_low'
   | 'lift_progressing'
   | 'strong_consistency';
 
@@ -56,7 +63,8 @@ export type InsightId =
 export type InsightAction =
   | { kind: 'deload'; label: string; exerciseId: string; stalledKg: number; deloadKg: number }
   | { kind: 'protein_foods'; label: string }
-  | { kind: 'browse_plans'; label: string };
+  | { kind: 'browse_plans'; label: string }
+  | { kind: 'log_cardio'; label: string };
 
 export interface Insight {
   id: InsightId;
@@ -300,6 +308,32 @@ export function deriveInsights(input: InsightInput): Insight[] {
         title: 'Short sleep is working against your training',
         detail: `Averaging ${mean.toFixed(1)} hours across ${plural(nights.length, 'night')}. Recovery is when training turns into progress, and under-sleeping blunts both strength gains and appetite control.`,
         priority: 4,
+      });
+    }
+  }
+
+  // --- Cardio, for the goals that are about it. ---
+  // Only once the user has two weeks of history of any kind: a new account has logged no cardio
+  // because it's new, not because they don't do any.
+  const cardioGoal = profile.goal === 'improve_endurance' || profile.goal === 'general_health';
+  const windowStart = addDaysISO(today, -(CARDIO_WINDOW_DAYS - 1));
+  const earliest = [...workoutLogs.map((w) => w.date), ...foodEntries.map((f) => f.date), ...weights.map((w) => w.date)]
+    .reduce<string | null>((min, d) => (min === null || d < min ? d : min), null);
+  if (cardioGoal && earliest !== null && earliest <= windowStart) {
+    const perWeek = Math.round(cardioMinutes(workoutLogs, windowStart, today) / (CARDIO_WINDOW_DAYS / 7));
+    if (perWeek < CARDIO_BASELINE_MIN_PER_WEEK) {
+      const why =
+        profile.goal === 'improve_endurance'
+          ? 'Endurance is built almost entirely out of that base — more steady minutes, before anything harder.'
+          : "It's the single habit most tied to long-term health, and it doesn't need to be intense to count.";
+      insights.push({
+        id: 'cardio_low',
+        key: 'cardio_low',
+        tone: 'suggestion',
+        title: perWeek === 0 ? 'No cardio logged in two weeks' : 'Cardio is under the weekly baseline',
+        detail: `${perWeek === 0 ? 'Nothing' : `About ${perWeek} minutes a week`} over the last two weeks, against the WHO baseline of ${CARDIO_BASELINE_MIN_PER_WEEK}. ${why}`,
+        priority: 4,
+        action: { kind: 'log_cardio', label: 'Log cardio' },
       });
     }
   }

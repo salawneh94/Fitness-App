@@ -247,9 +247,17 @@ function YourPlanCard() {
           workout={playing}
           unit={profile.unitSystem}
           onCancel={() => setPlaying(null)}
-          onFinish={(durationMin, exerciseLogs, caloriesBurned, notes) => {
+          onFinish={(durationMin, exerciseLogs, caloriesBurned, notes, cardio) => {
             // Logged under the missed session's name: that's what marks the missed day made up.
-            addWorkoutLog({ date: today, workoutName: playing.name, durationMin, caloriesBurned, notes, exerciseLogs });
+            addWorkoutLog({
+              date: today,
+              workoutName: playing.name,
+              durationMin,
+              caloriesBurned,
+              notes,
+              exerciseLogs,
+              cardio: cardio.length > 0 ? cardio : undefined,
+            });
             setPlaying(null);
           }}
         />
