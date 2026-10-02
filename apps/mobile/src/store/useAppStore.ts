@@ -14,6 +14,7 @@ import {
   type ScheduledWorkout,
   type SleepEntry,
   type StepsEntry,
+  type WaterEntry,
   type WeightEntry,
   type WorkoutLogEntry,
 } from '@fittrack/shared';
@@ -38,6 +39,7 @@ interface AppState {
   weightHistory: WeightEntry[];
   stepsHistory: StepsEntry[];
   sleepHistory: SleepEntry[];
+  waterHistory: WaterEntry[];
   measurementsHistory: BodyMeasurementEntry[];
   foodEntries: FoodEntry[];
   scheduledWorkouts: ScheduledWorkout[];
@@ -49,6 +51,8 @@ interface AppState {
   updateWeight: (weightKg: number) => void;
   updateSteps: (steps: number) => void;
   updateSleep: (hours: number) => void;
+  /** Add to (or, with a negative amount, take back from) today's water total. */
+  addWater: (deltaMl: number) => void;
   updateMeasurement: (fields: Omit<BodyMeasurementEntry, 'date'>) => void;
 
   addFoodEntry: (entry: Omit<FoodEntry, 'id' | 'loggedAt'>) => void;
@@ -79,6 +83,7 @@ function emptyState(): Pick<
   | 'weightHistory'
   | 'stepsHistory'
   | 'sleepHistory'
+  | 'waterHistory'
   | 'measurementsHistory'
   | 'foodEntries'
   | 'scheduledWorkouts'
@@ -91,6 +96,7 @@ function emptyState(): Pick<
     weightHistory: [],
     stepsHistory: [],
     sleepHistory: [],
+    waterHistory: [],
     measurementsHistory: [],
     foodEntries: [],
     scheduledWorkouts: [],
@@ -154,6 +160,19 @@ export const useAppStore = create<AppState>()(
         }));
         const userId = currentUserId();
         if (userId) push.sleep(userId, { date: todayISO(), hours });
+      },
+
+      addWater: (deltaMl) => {
+        const date = todayISO();
+        const current = get().waterHistory.find((w) => w.date === date)?.ml ?? 0;
+        // Floored at zero so an undo tapped once too often can't produce a negative day.
+        const entry = { date, ml: Math.max(0, Math.round(current + deltaMl)) };
+        set((state) => ({ waterHistory: upsertByDate(state.waterHistory, entry) }));
+        // The day's running total is what's stored, so every write is idempotent and only the
+        // latest matters: taps made while offline (or while a flush is in flight) collapse into
+        // a single queued write, since the queue keeps only the newest op per key.
+        const userId = currentUserId();
+        if (userId) push.water(userId, entry);
       },
 
       updateMeasurement: (fields) => {

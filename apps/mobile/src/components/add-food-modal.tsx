@@ -1,15 +1,34 @@
 import { useMemo, useState } from 'react';
-import { X, ScanBarcode, PenLine, Loader2, CircleCheck, Utensils, History } from 'lucide-react-native';
+import { X, ScanBarcode, PenLine, Loader2, CircleCheck, Utensils, History, Search, Package } from 'lucide-react-native';
 import { Modal, ScrollView, Text, View } from 'react-native';
 import { useAppStore } from '@/store/useAppStore';
-import type { FoodEntry, MealType } from '@fittrack/shared';
-import { addDaysISO, foodsFromDay, recentFoods, todayISO, colors, type RecentFood } from '@fittrack/shared';
-import { lookupBarcode, type ScannedProduct } from '@/lib/food-api';
+import type { MealType } from '@fittrack/shared';
+import {
+  addDaysISO,
+  colors,
+  foodsFromDay,
+  normalizeFoodText,
+  recentFoods,
+  scalePer100g,
+  searchGenericFoods,
+  searchRecentFoods,
+  servingLabelFor,
+  todayISO,
+  type GenericFood,
+  type RecentFood,
+} from '@fittrack/shared';
+import { lookupBarcode, searchProducts, SearchRateLimitedError, type FoodCandidate } from '@/lib/food-api';
 import BarcodeScannerModal from './barcode-scanner-modal';
 import TextField from './ui/text-field';
 import PressableScale from '@/components/ui/pressable-scale';
 
-type Mode = 'choose' | 'scan' | 'manual' | 'confirmScanned' | 'savedMeals';
+type Mode = 'choose' | 'scan' | 'manual' | 'confirm' | 'savedMeals';
+
+type RemoteSearch =
+  | { status: 'idle' }
+  | { status: 'loading'; query: string }
+  | { status: 'done'; query: string; results: FoodCandidate[] }
+  | { status: 'error'; query: string; message: string };
 
 const MEAL_LABELS: Record<MealType, string> = {
   breakfast: 'breakfast',
@@ -21,6 +40,14 @@ const MEAL_LABELS: Record<MealType, string> = {
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
     <Text className="text-sm font-medium mb-1.5" style={{ color: colors.textSecondary }}>
+      {children}
+    </Text>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <Text className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: colors.textMuted }}>
       {children}
     </Text>
   );
@@ -46,6 +73,59 @@ function ChoiceRow({ icon: Icon, title, sub, onPress }: { icon: typeof ScanBarco
   );
 }
 
+/** A bordered list of tappable food rows — recents, staples and search hits all render alike. */
+function FoodList<T>({
+  items,
+  keyOf,
+  title,
+  sub,
+  trailing,
+  onPress,
+  haptic = 'selection',
+}: {
+  items: T[];
+  keyOf: (item: T, index: number) => string;
+  title: (item: T) => string;
+  sub: (item: T) => string;
+  trailing: (item: T) => string;
+  onPress: (item: T) => void;
+  haptic?: 'selection' | 'success';
+}) {
+  return (
+    <View className="rounded-xl border overflow-hidden" style={{ borderColor: colors.gridline }}>
+      {items.map((item, i) => (
+        <PressableScale
+          key={keyOf(item, i)}
+          hapticStyle={haptic}
+          accessibilityRole="button"
+          accessibilityLabel={`${haptic === 'success' ? 'Log' : 'Choose'} ${title(item)}`}
+          onPress={() => onPress(item)}
+          className="flex-row items-center justify-between gap-3 px-4 py-3"
+          style={i > 0 ? { borderTopWidth: 1, borderTopColor: colors.gridline } : undefined}
+        >
+          <View className="flex-1 min-w-0">
+            <Text numberOfLines={1} className="text-sm font-medium" style={{ color: colors.textPrimary }}>
+              {title(item)}
+            </Text>
+            <Text numberOfLines={1} className="text-xs" style={{ color: colors.textMuted }}>
+              {sub(item)}
+            </Text>
+          </View>
+          <Text className="text-sm shrink-0" style={{ color: colors.textSecondary }}>
+            {trailing(item)}
+          </Text>
+        </PressableScale>
+      ))}
+    </View>
+  );
+}
+
+const recentKey = (food: RecentFood) => `${food.name}-${food.brand ?? ''}-${food.servingLabel ?? ''}`;
+
+function stapleToCandidate(food: GenericFood): FoodCandidate {
+  return { name: food.name, per100g: food.per100g, servings: food.servings, source: 'search' };
+}
+
 export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClose: () => void }) {
   const addFoodEntry = useAppStore((s) => s.addFoodEntry);
   const foodEntries = useAppStore((s) => s.foodEntries);
@@ -54,20 +134,28 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
   const [mode, setMode] = useState<Mode>('choose');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [scanned, setScanned] = useState<ScannedProduct | null>(null);
+  const [candidate, setCandidate] = useState<FoodCandidate | null>(null);
   const [grams, setGrams] = useState('100');
+  const [query, setQuery] = useState('');
+  const [remote, setRemote] = useState<RemoteSearch>({ status: 'idle' });
 
-  // Both walk the whole history, so they're memoized — this modal opens on every meal log.
-  const recents = useMemo(() => recentFoods(foodEntries, meal), [foodEntries, meal]);
+  // All walk the whole history, so they're memoized — this modal opens on every meal log. The
+  // wider pool is what gets searched: something eaten forty foods ago should still be findable by
+  // name even though it's long gone from the top-12 list.
+  const recentPool = useMemo(() => recentFoods(foodEntries, meal, 300), [foodEntries, meal]);
+  const recents = useMemo(() => recentPool.slice(0, 12), [recentPool]);
   const yesterdays = useMemo(
     () => foodsFromDay(foodEntries, addDaysISO(todayISO(), -1), meal),
     [foodEntries, meal]
   );
 
-  /** Re-log a previously eaten food as a new entry today — never a copy of the old row. */
-  function logRecent(food: RecentFood) {
-    addFoodEntry({ ...food, date: todayISO(), meal });
-  }
+  const normalizedQuery = normalizeFoodText(query);
+  const searching = normalizedQuery.length > 0;
+  // Local matches update on every keystroke — both lists are on-device and small. Only the
+  // packaged-food search goes over the network, and only when asked (see searchProducts).
+  const myMatches = useMemo(() => (searching ? searchRecentFoods(recentPool, query) : []), [recentPool, query, searching]);
+  const stapleMatches = useMemo(() => (searching ? searchGenericFoods(query) : []), [query, searching]);
+  const remoteIsCurrent = remote.status !== 'idle' && remote.query === normalizedQuery;
 
   const [manual, setManual] = useState({
     name: '',
@@ -79,6 +167,43 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
     servingLabel: 'serving',
   });
 
+  /** Re-log a previously eaten food as a new entry today — never a copy of the old row. */
+  function logRecent(food: RecentFood) {
+    addFoodEntry({ ...food, date: todayISO(), meal });
+  }
+
+  function openConfirm(next: FoodCandidate) {
+    setCandidate(next);
+    // Start from the food's natural portion when it has one — "1 medium banana" is what someone
+    // just ate, 100 g is a unit nobody eats in.
+    setGrams(String(next.servings[0]?.grams ?? 100));
+    setMode('confirm');
+  }
+
+  function openManual(name: string) {
+    setManual((m) => ({ ...m, name }));
+    setMode('manual');
+  }
+
+  async function runRemoteSearch() {
+    if (!searching || remote.status === 'loading') return;
+    const q = normalizedQuery;
+    setRemote({ status: 'loading', query: q });
+    try {
+      const results = await searchProducts(query);
+      setRemote({ status: 'done', query: q, results });
+    } catch (e) {
+      setRemote({
+        status: 'error',
+        query: q,
+        message:
+          e instanceof SearchRateLimitedError
+            ? `That's a lot of searches in a row — the food database allows a few a minute. Try again in ${e.retryInSec}s.`
+            : 'Could not reach the food database. Check your connection, or pick from the matches above.',
+      });
+    }
+  }
+
   async function handleDetected(barcode: string) {
     setMode('choose');
     setLoading(true);
@@ -86,11 +211,9 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
     try {
       const product = await lookupBarcode(barcode);
       if (!product) {
-        setError(`No product found for barcode ${barcode}. Try manual entry.`);
+        setError(`No product found for barcode ${barcode}. Try searching by name or manual entry.`);
       } else {
-        setScanned(product);
-        setGrams('100');
-        setMode('confirmScanned');
+        openConfirm(product);
       }
     } catch {
       setError('Could not reach the product database. Check your connection or use manual entry.');
@@ -99,30 +222,22 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
     }
   }
 
-  function confirmScanned() {
-    if (!scanned) return;
-    const g = Number(grams) || 0;
-    const factor = g / 100;
-    const entry: Omit<FoodEntry, 'id' | 'loggedAt'> = {
+  const gramsValue = Number(grams) || 0;
+  const preview = candidate ? scalePer100g(candidate.per100g, gramsValue) : null;
+
+  function confirmCandidate() {
+    if (!candidate || gramsValue <= 0) return;
+    addFoodEntry({
       date: todayISO(),
       meal,
-      name: scanned.name,
-      brand: scanned.brand,
+      name: candidate.name,
+      brand: candidate.brand,
       quantity: 1,
-      servingLabel: `${g} g`,
-      calories: Math.round(scanned.caloriesPer100g * factor),
-      proteinG: Math.round(scanned.proteinPer100g * factor * 10) / 10,
-      carbsG: Math.round(scanned.carbsPer100g * factor * 10) / 10,
-      fatG: Math.round(scanned.fatPer100g * factor * 10) / 10,
-      micros: Object.fromEntries(
-        Object.entries(scanned.microsPer100g)
-          .filter(([, v]) => typeof v === 'number')
-          .map(([k, v]) => [k, Math.round((v as number) * factor * 10) / 10])
-      ),
-      source: 'barcode',
-      barcode: scanned.barcode,
-    };
-    addFoodEntry(entry);
+      servingLabel: servingLabelFor(gramsValue, candidate.servings),
+      ...scalePer100g(candidate.per100g, gramsValue),
+      source: candidate.source,
+      barcode: candidate.barcode,
+    });
     onClose();
   }
 
@@ -165,80 +280,174 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
 
           {!loading && mode === 'choose' && (
             <View className="gap-3">
+              {/* Search sits above everything: typing a name is how people expect to find a
+                  food, and until now it wasn't possible at all — every unpackaged food meant
+                  typing four macro numbers by hand. */}
+              <View>
+                <TextField
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search foods — e.g. banana, greek yogurt"
+                  returnKeyType="search"
+                  onSubmitEditing={runRemoteSearch}
+                  autoCorrect={false}
+                  accessibilityLabel="Search foods"
+                  style={{ paddingLeft: 40 }}
+                />
+                <View pointerEvents="none" className="absolute left-3.5 top-0 bottom-0 justify-center">
+                  <Search size={16} color={colors.textMuted} />
+                </View>
+              </View>
+
               {error && (
                 <Text className="text-sm" style={{ color: colors.statusWarning }}>
                   {error}
                 </Text>
               )}
 
-              {/* Repeat and recents come first, above scan and manual entry: for anyone past
-                  their first week these are the paths that get used, and burying them under
-                  "Scan Barcode" is what makes logging feel like data entry. */}
-              {yesterdays.length > 0 && (
-                <ChoiceRow
-                  icon={History}
-                  title={`Repeat yesterday's ${MEAL_LABELS[meal]}`}
-                  sub={`${yesterdays.length} item${yesterdays.length === 1 ? '' : 's'} · ${Math.round(
-                    yesterdays.reduce((s, f) => s + f.calories * f.quantity, 0)
-                  )} kcal`}
-                  onPress={() => {
-                    for (const food of yesterdays) logRecent(food);
-                    onClose();
-                  }}
-                />
-              )}
-
-              {recents.length > 0 && (
-                <View>
-                  <Text className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: colors.textMuted }}>
-                    Recent
-                  </Text>
-                  <View className="rounded-xl border overflow-hidden" style={{ borderColor: colors.gridline }}>
-                    {recents.map((food, i) => (
-                      <PressableScale
-                        key={`${food.name}-${food.brand ?? ''}-${food.servingLabel ?? ''}`}
-                        hapticStyle="success"
-                        accessibilityRole="button"
-                        accessibilityLabel={`Log ${food.name}`}
-                        onPress={() => {
-                          logRecent(food);
+              {searching ? (
+                <>
+                  {myMatches.length > 0 && (
+                    <View>
+                      <SectionLabel>Your foods</SectionLabel>
+                      <FoodList
+                        items={myMatches}
+                        keyOf={recentKey}
+                        title={(f) => f.name}
+                        sub={(f) => `${f.brand ? `${f.brand} · ` : ''}${f.quantity} × ${f.servingLabel ?? 'serving'}`}
+                        trailing={(f) => `${Math.round(f.calories * f.quantity)} kcal`}
+                        haptic="success"
+                        onPress={(f) => {
+                          logRecent(f);
                           onClose();
                         }}
-                        className="flex-row items-center justify-between gap-3 px-4 py-3"
-                        style={i > 0 ? { borderTopWidth: 1, borderTopColor: colors.gridline } : undefined}
-                      >
-                        <View className="flex-1 min-w-0">
-                          <Text numberOfLines={1} className="text-sm font-medium" style={{ color: colors.textPrimary }}>
-                            {food.name}
-                          </Text>
-                          <Text numberOfLines={1} className="text-xs" style={{ color: colors.textMuted }}>
-                            {food.brand ? `${food.brand} · ` : ''}
-                            {food.quantity} × {food.servingLabel ?? 'serving'}
-                          </Text>
-                        </View>
-                        <Text className="text-sm shrink-0" style={{ color: colors.textSecondary }}>
-                          {Math.round(food.calories * food.quantity)} kcal
-                        </Text>
-                      </PressableScale>
-                    ))}
-                  </View>
-                </View>
-              )}
+                      />
+                    </View>
+                  )}
 
-              <ChoiceRow
-                icon={ScanBarcode}
-                title="Scan Barcode / QR"
-                sub="Auto-fill nutrition from packaging"
-                onPress={() => setMode('scan')}
-              />
-              <ChoiceRow icon={PenLine} title="Manual Entry" sub="Type in the details yourself" onPress={() => setMode('manual')} />
-              {savedMeals.length > 0 && (
-                <ChoiceRow
-                  icon={Utensils}
-                  title="From Saved Meals"
-                  sub="Quick-add a meal you've saved before"
-                  onPress={() => setMode('savedMeals')}
-                />
+                  {stapleMatches.length > 0 && (
+                    <View>
+                      <SectionLabel>Common foods</SectionLabel>
+                      <FoodList
+                        items={stapleMatches}
+                        keyOf={(f) => f.id}
+                        title={(f) => f.name}
+                        sub={(f) => (f.servings[0] ? `${f.servings[0].label} · ${f.servings[0].grams} g` : 'per 100 g')}
+                        trailing={(f) =>
+                          `${f.servings[0] ? scalePer100g(f.per100g, f.servings[0].grams).calories : f.per100g.calories} kcal`
+                        }
+                        onPress={(f) => openConfirm(stapleToCandidate(f))}
+                      />
+                    </View>
+                  )}
+
+                  <View>
+                    <SectionLabel>Packaged foods</SectionLabel>
+                    {!remoteIsCurrent && (
+                      <ChoiceRow
+                        icon={Package}
+                        title={`Search packaged foods for “${query.trim()}”`}
+                        sub="Brands and products from Open Food Facts"
+                        onPress={runRemoteSearch}
+                      />
+                    )}
+                    {remoteIsCurrent && remote.status === 'loading' && (
+                      <View className="flex-row items-center gap-2 py-4 px-1">
+                        <Loader2 size={16} color={colors.textSecondary} />
+                        <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                          Searching…
+                        </Text>
+                      </View>
+                    )}
+                    {remoteIsCurrent && remote.status === 'error' && (
+                      <View className="py-2 gap-2">
+                        <Text className="text-sm" style={{ color: colors.statusWarning }}>
+                          {remote.message}
+                        </Text>
+                        <PressableScale hapticStyle="selection" accessibilityRole="button" onPress={runRemoteSearch} className="self-start">
+                          <Text className="text-sm font-medium" style={{ color: colors.brandPrimary }}>
+                            Try again
+                          </Text>
+                        </PressableScale>
+                      </View>
+                    )}
+                    {remoteIsCurrent && remote.status === 'done' && remote.results.length === 0 && (
+                      <Text className="text-sm py-2" style={{ color: colors.textMuted }}>
+                        No packaged products with nutrition info matched “{query.trim()}”.
+                      </Text>
+                    )}
+                    {remoteIsCurrent && remote.status === 'done' && remote.results.length > 0 && (
+                      <FoodList
+                        items={remote.results}
+                        keyOf={(f, i) => f.barcode ?? `${f.name}-${i}`}
+                        title={(f) => f.name}
+                        sub={(f) => f.brand ?? 'per 100 g'}
+                        trailing={(f) => `${f.per100g.calories} kcal/100g`}
+                        onPress={openConfirm}
+                      />
+                    )}
+                  </View>
+
+                  <ChoiceRow
+                    icon={PenLine}
+                    title={`Enter “${query.trim()}” manually`}
+                    sub="Not listed? Type in the details yourself"
+                    onPress={() => openManual(query.trim())}
+                  />
+                </>
+              ) : (
+                <>
+                  {/* Repeat and recents come first, above scan and manual entry: for anyone past
+                      their first week these are the paths that get used, and burying them under
+                      "Scan Barcode" is what makes logging feel like data entry. */}
+                  {yesterdays.length > 0 && (
+                    <ChoiceRow
+                      icon={History}
+                      title={`Repeat yesterday's ${MEAL_LABELS[meal]}`}
+                      sub={`${yesterdays.length} item${yesterdays.length === 1 ? '' : 's'} · ${Math.round(
+                        yesterdays.reduce((s, f) => s + f.calories * f.quantity, 0)
+                      )} kcal`}
+                      onPress={() => {
+                        for (const food of yesterdays) logRecent(food);
+                        onClose();
+                      }}
+                    />
+                  )}
+
+                  {recents.length > 0 && (
+                    <View>
+                      <SectionLabel>Recent</SectionLabel>
+                      <FoodList
+                        items={recents}
+                        keyOf={recentKey}
+                        title={(f) => f.name}
+                        sub={(f) => `${f.brand ? `${f.brand} · ` : ''}${f.quantity} × ${f.servingLabel ?? 'serving'}`}
+                        trailing={(f) => `${Math.round(f.calories * f.quantity)} kcal`}
+                        haptic="success"
+                        onPress={(f) => {
+                          logRecent(f);
+                          onClose();
+                        }}
+                      />
+                    </View>
+                  )}
+
+                  <ChoiceRow
+                    icon={ScanBarcode}
+                    title="Scan Barcode / QR"
+                    sub="Auto-fill nutrition from packaging"
+                    onPress={() => setMode('scan')}
+                  />
+                  <ChoiceRow icon={PenLine} title="Manual Entry" sub="Type in the details yourself" onPress={() => setMode('manual')} />
+                  {savedMeals.length > 0 && (
+                    <ChoiceRow
+                      icon={Utensils}
+                      title="From Saved Meals"
+                      sub="Quick-add a meal you've saved before"
+                      onPress={() => setMode('savedMeals')}
+                    />
+                  )}
+                </>
               )}
             </View>
           )}
@@ -285,31 +494,67 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
 
           {mode === 'scan' && <BarcodeScannerModal onDetected={handleDetected} onClose={() => setMode('choose')} />}
 
-          {mode === 'confirmScanned' && scanned && (
+          {mode === 'confirm' && candidate && preview && (
             <View className="gap-4">
               <View className="flex-row items-start gap-2 p-3 rounded-lg" style={{ backgroundColor: 'rgba(34,211,238,0.1)' }}>
                 <CircleCheck size={18} color={colors.brandPrimary} style={{ marginTop: 2 }} />
                 <View className="flex-1">
                   <Text className="text-sm font-medium" style={{ color: colors.textPrimary }}>
-                    {scanned.name}
+                    {candidate.name}
                   </Text>
-                  {scanned.brand && (
+                  {candidate.brand && (
                     <Text className="text-xs" style={{ color: colors.textMuted }}>
-                      {scanned.brand}
+                      {candidate.brand}
                     </Text>
                   )}
                 </View>
               </View>
+
+              {candidate.per100g.calories === 0 && candidate.source === 'barcode' && (
+                <PressableScale onPress={() => openManual(candidate.name)}>
+                  <Text className="text-sm" style={{ color: colors.statusWarning }}>
+                    This product has no nutrition info on file.{' '}
+                    <Text style={{ textDecorationLine: 'underline' }}>Enter it manually</Text>
+                  </Text>
+                </PressableScale>
+              )}
+
+              {/* Portion chips: one tap for the amount people actually eat, so the grams field
+                  is for the exceptions rather than every single log. */}
+              <View className="flex-row flex-wrap gap-2">
+                {[...candidate.servings, { label: '100 g', grams: 100 }].map((s) => {
+                  const selected = Math.abs(gramsValue - s.grams) < 0.05;
+                  return (
+                    <PressableScale
+                      key={`${s.label}-${s.grams}`}
+                      hapticStyle="selection"
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      onPress={() => setGrams(String(s.grams))}
+                      className="px-3 py-1.5 rounded-full border"
+                      style={{
+                        borderColor: selected ? colors.brandPrimary : colors.gridline,
+                        backgroundColor: selected ? 'rgba(34,211,238,0.12)' : 'transparent',
+                      }}
+                    >
+                      <Text className="text-xs font-medium" style={{ color: selected ? colors.brandPrimary : colors.textSecondary }}>
+                        {s.label === '100 g' ? s.label : `${s.label} · ${s.grams} g`}
+                      </Text>
+                    </PressableScale>
+                  );
+                })}
+              </View>
+
               <View>
                 <FieldLabel>Amount (grams)</FieldLabel>
                 <TextField keyboardType="numeric" value={grams} onChangeText={setGrams} />
               </View>
               <View className="flex-row gap-2">
                 {[
-                  { label: 'kcal', value: Math.round(scanned.caloriesPer100g * ((Number(grams) || 0) / 100)) },
-                  { label: 'protein', value: `${Math.round(scanned.proteinPer100g * ((Number(grams) || 0) / 100))}g` },
-                  { label: 'carbs', value: `${Math.round(scanned.carbsPer100g * ((Number(grams) || 0) / 100))}g` },
-                  { label: 'fat', value: `${Math.round(scanned.fatPer100g * ((Number(grams) || 0) / 100))}g` },
+                  { label: 'kcal', value: preview.calories },
+                  { label: 'protein', value: `${Math.round(preview.proteinG)}g` },
+                  { label: 'carbs', value: `${Math.round(preview.carbsG)}g` },
+                  { label: 'fat', value: `${Math.round(preview.fatG)}g` },
                 ].map((s) => (
                   <View key={s.label} className="flex-1 rounded-lg py-2 items-center" style={{ backgroundColor: colors.chartSurface }}>
                     <Text className="font-semibold" style={{ color: colors.textPrimary }}>
@@ -331,7 +576,13 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
                     Back
                   </Text>
                 </PressableScale>
-                <PressableScale hapticStyle="success" onPress={confirmScanned} className="flex-1 py-2.5 rounded-full items-center" style={{ backgroundColor: colors.brandPrimaryDark }}>
+                <PressableScale
+                  hapticStyle="success"
+                  onPress={confirmCandidate}
+                  disabled={gramsValue <= 0}
+                  className="flex-1 py-2.5 rounded-full items-center"
+                  style={{ backgroundColor: colors.brandPrimaryDark, opacity: gramsValue <= 0 ? 0.5 : 1 }}
+                >
                   <Text className="text-white text-sm font-semibold">Add to log</Text>
                 </PressableScale>
               </View>

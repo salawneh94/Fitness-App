@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Plus, ScanBarcode, Trash2 } from 'lucide-react-native';
+import { Plus, ScanBarcode, Search, Trash2 } from 'lucide-react-native';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
@@ -13,6 +13,7 @@ import MacroBars from '@/components/charts/macro-bars';
 import MicronutrientList from '@/components/micronutrient-list';
 import AddFoodModal from '@/components/add-food-modal';
 import SavedMealsSection from '@/components/saved-meals-section';
+import WaterCard from '@/components/water-card';
 import PressableScale from '@/components/ui/pressable-scale';
 
 const MEALS: { key: MealType; label: string }[] = [
@@ -72,7 +73,7 @@ export default function NutritionScreen() {
             Nutrition
           </Text>
           <Text className="text-sm" style={{ color: colors.textSecondary }}>
-            Log meals manually or scan a barcode for instant nutrition info.
+            Search, scan or re-log a meal — and keep track of your water.
           </Text>
         </View>
 
@@ -89,6 +90,8 @@ export default function NutritionScreen() {
             fat={{ consumed: consumed.fatG, target: targets.fatG }}
           />
         </Card>
+
+        <WaterCard profile={profile} />
 
         <Card title="Micronutrients Today">
           <MicronutrientList totals={microTotals} />
@@ -125,6 +128,7 @@ export default function NutritionScreen() {
                         <View className="flex-1 min-w-0">
                           <View className="flex-row items-center gap-1.5">
                             {e.source === 'barcode' && <ScanBarcode size={13} color={colors.textMuted} />}
+                            {e.source === 'search' && <Search size={13} color={colors.textMuted} />}
                             <Text className="text-sm font-medium" style={{ color: colors.textPrimary }}>
                               {e.name}
                             </Text>

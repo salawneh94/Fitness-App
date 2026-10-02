@@ -7,6 +7,7 @@ import type {
   ScheduledWorkout,
   SleepEntry,
   StepsEntry,
+  WaterEntry,
   WeightEntry,
   WorkoutLogEntry,
 } from '@fittrack/shared';
@@ -115,6 +116,15 @@ function pushSleep(userId: string, entry: SleepEntry) {
     table: 'sleep_entries',
     op: 'upsert',
     row: { user_id: userId, date: entry.date, hours: entry.hours },
+  });
+}
+
+function pushWater(userId: string, entry: WaterEntry) {
+  enqueue({
+    key: `water_entries:${entry.date}`,
+    table: 'water_entries',
+    op: 'upsert',
+    row: { user_id: userId, date: entry.date, ml: entry.ml },
   });
 }
 
@@ -309,6 +319,7 @@ export const push = {
   weight: pushWeight,
   steps: pushSteps,
   sleep: pushSleep,
+  water: pushWater,
   measurement: pushMeasurement,
   foodEntry: pushFoodEntry,
   deleteFoodEntry,
@@ -398,7 +409,7 @@ export async function pullRemote(userId: string, { full = false }: { full?: bool
 
   const profileQuery = supabase.from('profiles').select('*').eq('id', userId);
 
-  const [profileRes, weightRes, stepsRes, sleepRes, measurementsRes, foodRes, savedMealsRes, scheduledRes, workoutLogsRes, photosRes] =
+  const [profileRes, weightRes, stepsRes, sleepRes, measurementsRes, foodRes, savedMealsRes, scheduledRes, workoutLogsRes, photosRes, waterRes] =
     await Promise.all([
       (watermark ? profileQuery.gt('updated_at', watermark) : profileQuery).maybeSingle(),
       scoped('weight_entries'),
@@ -410,6 +421,7 @@ export async function pullRemote(userId: string, { full = false }: { full?: bool
       scoped('scheduled_workouts'),
       scoped('workout_logs'),
       scoped('progress_photos'),
+      scoped('water_entries'),
     ]);
 
   const current = useAppStore.getState();
@@ -453,9 +465,10 @@ export async function pullRemote(userId: string, { full = false }: { full?: bool
     scheduledWorkouts: apply('scheduled_workouts', scheduledRes, (e) => e.day, scheduledWorkoutFromRow, current.scheduledWorkouts),
     workoutLogs: apply('workout_logs', workoutLogsRes, (e) => e.id, workoutLogFromRow, current.workoutLogs),
     progressPhotos: apply('progress_photos', photosRes, (e) => e.id, progressPhotoFromRow, current.progressPhotos),
+    waterHistory: apply('water_entries', waterRes, (e) => e.date, (r) => ({ date: r.date, ml: Number(r.ml) }), current.waterHistory),
   });
 
-  const responses = [profileRes, weightRes, stepsRes, sleepRes, measurementsRes, foodRes, savedMealsRes, scheduledRes, workoutLogsRes, photosRes];
+  const responses = [profileRes, weightRes, stepsRes, sleepRes, measurementsRes, foodRes, savedMealsRes, scheduledRes, workoutLogsRes, photosRes, waterRes];
   // The watermark is one value shared by every table, so it may only advance when every table
   // answered. Advancing it past rows a failed table never delivered would make the next delta
   // pull skip them — permanently, until some later full pull happened to catch them.
@@ -473,6 +486,7 @@ export async function pullRemote(userId: string, { full = false }: { full?: bool
       scheduledRes.data ?? [],
       workoutLogsRes.data ?? [],
       photosRes.data ?? [],
+      waterRes.data ?? [],
     ],
     watermark
   );

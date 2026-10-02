@@ -37,6 +37,11 @@ export interface SleepEntry {
   hours: number;
 }
 
+export interface WaterEntry {
+  date: string; // ISO date
+  ml: number; // total for the day — stored in ml regardless of unit system
+}
+
 export type MeasurementKey = 'waistCm' | 'chestCm' | 'armsCm' | 'hipsCm' | 'thighsCm';
 
 export interface BodyMeasurementEntry {
@@ -79,7 +84,7 @@ export interface FoodEntry {
   carbsG: number;
   fatG: number;
   micros?: Micronutrients;
-  source: 'manual' | 'barcode';
+  source: 'manual' | 'barcode' | 'search';
   barcode?: string;
   loggedAt: string;
 }

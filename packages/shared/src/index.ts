@@ -11,3 +11,6 @@ export * from './foodHistory';
 export * from './progression';
 export * from './trend';
 export * from './insights';
+export * from './foodSearch';
+export * from './data/genericFoods';
+export * from './water';

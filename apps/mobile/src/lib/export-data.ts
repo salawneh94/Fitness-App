@@ -29,6 +29,7 @@ export function buildExport(): string {
       weightHistory: s.weightHistory,
       stepsHistory: s.stepsHistory,
       sleepHistory: s.sleepHistory,
+      waterHistory: s.waterHistory,
       measurementsHistory: s.measurementsHistory,
       foodEntries: s.foodEntries,
       scheduledWorkouts: s.scheduledWorkouts,
