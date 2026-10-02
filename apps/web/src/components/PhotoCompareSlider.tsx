@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { parseISODate } from '@fittrack/shared';
 import { getPhotoBlob } from '../lib/photoStore';
 import Card from './ui/Card';
 
@@ -61,7 +62,7 @@ export default function PhotoCompareSlider({ photos }: { photos: PhotoMeta[] }) 
           >
             {sorted.map((p) => (
               <option key={p.id} value={p.id}>
-                {new Date(p.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                {parseISODate(p.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
               </option>
             ))}
           </select>
@@ -75,7 +76,7 @@ export default function PhotoCompareSlider({ photos }: { photos: PhotoMeta[] }) 
           >
             {sorted.map((p) => (
               <option key={p.id} value={p.id}>
-                {new Date(p.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                {parseISODate(p.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
               </option>
             ))}
           </select>
@@ -105,10 +106,10 @@ export default function PhotoCompareSlider({ photos }: { photos: PhotoMeta[] }) 
             aria-label="Comparison slider"
           />
           <span className="absolute bottom-2 left-2 text-[10px] bg-black/60 text-white px-2 py-0.5 rounded-full">
-            {beforeDate && new Date(beforeDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            {beforeDate && parseISODate(beforeDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
           </span>
           <span className="absolute bottom-2 right-2 text-[10px] bg-black/60 text-white px-2 py-0.5 rounded-full">
-            {afterDate && new Date(afterDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            {afterDate && parseISODate(afterDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
           </span>
         </div>
       ) : (

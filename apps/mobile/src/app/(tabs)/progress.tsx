@@ -14,6 +14,7 @@ import {
   computeStreaks,
   displayWeight,
   estimate1RM,
+  parseISODate,
   todayISO,
   weightUnitLabel,
 } from '@fittrack/shared';
@@ -265,7 +266,7 @@ function PhotosCard({
                   style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
                 >
                   <Text className="text-[10px] text-white">
-                    {new Date(p.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    {parseISODate(p.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </Text>
                 </View>
               </PressableScale>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Minus, X } from 'lucide-react-native';
 import { Modal, ScrollView, Text, View } from 'react-native';
 import type { ExerciseLogEntry, UnitSystem, WorkoutLogEntry } from '@fittrack/shared';
-import { colors, displayWeight, toKgFromDisplay, weightUnitLabel } from '@fittrack/shared';
+import { colors, displayWeight, parseISODate, toKgFromDisplay, weightUnitLabel } from '@fittrack/shared';
 import TextField from './ui/text-field';
 import PressableScale from '@/components/ui/pressable-scale';
 
@@ -102,7 +102,7 @@ export default function EditWorkoutLogModal({
           </View>
           <Text className="text-xs mb-5" style={{ color: colors.textMuted }}>
             {log.workoutName} ·{' '}
-            {new Date(log.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+            {parseISODate(log.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
           </Text>
 
           <View className="flex-row gap-3 mb-5">

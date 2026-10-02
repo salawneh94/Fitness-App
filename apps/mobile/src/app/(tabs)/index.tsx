@@ -5,7 +5,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
-import { GOAL_LABELS, todayISO } from '@fittrack/shared';
+import { GOAL_LABELS, todayISO, withinLastDays } from '@fittrack/shared';
 import { computeStreaks, computeRestDayInsight } from '@fittrack/shared';
 import { displayWeight, formatHeight, formatWeight, weightUnitLabel, colors } from '@fittrack/shared';
 import type { Micronutrients } from '@fittrack/shared';
@@ -76,13 +76,8 @@ export default function OverviewScreen() {
   );
 
   const weeklyMinutes = useMemo(() => {
-    const now = Date.now();
-    return workoutLogs
-      .filter((w) => {
-        const diffDays = (now - new Date(w.date).getTime()) / 86400000;
-        return diffDays >= 0 && diffDays < 7;
-      })
-      .reduce((sum, w) => sum + w.durationMin, 0);
+    const today = todayISO();
+    return workoutLogs.filter((w) => withinLastDays(w.date, today, 7)).reduce((sum, w) => sum + w.durationMin, 0);
   }, [workoutLogs]);
 
   const startWeight = weightHistory[0]?.weightKg ?? profile.weightKg;

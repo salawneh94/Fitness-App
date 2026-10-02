@@ -213,6 +213,16 @@ export function addDaysISO(iso: string, delta: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * Is a calendar date within the last `days` days, today included? Compared as dates, never via
+ * the clock: `new Date('2026-10-02')` is UTC midnight, so measuring "days ago" from it puts a
+ * session logged just after local midnight in the future anywhere east of Greenwich — and drops it
+ * from "this week" until UTC catches up.
+ */
+export function withinLastDays(iso: string, today: string, days: number): boolean {
+  return iso > addDaysISO(today, -days) && iso <= today;
+}
+
 // Epley formula — a widely used estimate of 1-rep max from a submaximal set.
 export function estimate1RM(weightKg: number, reps: number): number {
   if (reps <= 1) return weightKg;

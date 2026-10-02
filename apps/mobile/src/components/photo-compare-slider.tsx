@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Slider from '@react-native-community/slider';
 import { Image } from 'expo-image';
 import { LayoutChangeEvent, Text, View } from 'react-native';
-import { colors } from '@fittrack/shared';
+import { colors, parseISODate } from '@fittrack/shared';
 import { getPhotoUri } from '@/lib/photo-store';
 import Card from './ui/card';
 
@@ -74,7 +74,7 @@ export default function PhotoCompareSlider({ photos }: { photos: PhotoMeta[] }) 
               style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
             >
               <Text className="text-[10px] text-white">
-                {beforeDate && new Date(beforeDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                {beforeDate && parseISODate(beforeDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
               </Text>
             </View>
             <View
@@ -82,7 +82,7 @@ export default function PhotoCompareSlider({ photos }: { photos: PhotoMeta[] }) 
               style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
             >
               <Text className="text-[10px] text-white">
-                {afterDate && new Date(afterDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                {afterDate && parseISODate(afterDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
               </Text>
             </View>
           </View>
@@ -128,7 +128,7 @@ function PhotoPicker({
         <View className="flex-row flex-wrap gap-1.5">
           {photos.map((p) => {
             const isSelected = p.id === selectedId;
-            const dateLabel = new Date(p.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            const dateLabel = parseISODate(p.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
             return (
               <Text
                 key={p.id}

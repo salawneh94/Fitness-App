@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Flame, Award, CalendarCheck, Camera, Trash2, Plus } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { computeStreaks } from '@fittrack/shared';
-import { estimate1RM, todayISO, calcDailyTargets, STEP_GOAL, SLEEP_GOAL_HOURS } from '@fittrack/shared';
+import { estimate1RM, parseISODate, todayISO, calcDailyTargets, STEP_GOAL, SLEEP_GOAL_HOURS } from '@fittrack/shared';
 import { displayWeight, weightUnitLabel } from '@fittrack/shared';
 import { resizeImageFile } from '../lib/imageResize';
 import { savePhotoBlob, getPhotoBlob, deletePhotoBlob } from '../lib/photoStore';
@@ -228,7 +228,7 @@ function PhotosCard({
             >
               {urls[p.id] && <img src={urls[p.id]} alt={p.date} className="w-full h-full object-cover" />}
               <span className="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[10px] py-0.5">
-                {new Date(p.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                {parseISODate(p.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
               </span>
             </button>
           ))}

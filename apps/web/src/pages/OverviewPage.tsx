@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Flame, Clock, Target, TrendingUp, Pencil, Zap } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { calcDailyTargets, GOAL_LABELS, todayISO } from '@fittrack/shared';
+import { calcDailyTargets, GOAL_LABELS, todayISO, withinLastDays } from '@fittrack/shared';
 import { computeStreaks, computeRestDayInsight } from '@fittrack/shared';
 import { displayWeight, formatHeight, formatWeight, weightUnitLabel } from '@fittrack/shared';
 import Card from '../components/ui/Card';
@@ -59,12 +59,7 @@ export default function OverviewPage() {
   const caloriesBurnedToday = todaysWorkouts.reduce((sum, w) => sum + (w.caloriesBurned ?? 0), 0);
 
   const weeklyMinutes = workoutLogs
-    .filter((w) => {
-      const d = new Date(w.date);
-      const now = new Date();
-      const diffDays = (now.getTime() - d.getTime()) / 86400000;
-      return diffDays >= 0 && diffDays < 7;
-    })
+    .filter((w) => withinLastDays(w.date, todayISO(), 7))
     .reduce((sum, w) => sum + w.durationMin, 0);
 
   const startWeight = weightHistory[0]?.weightKg ?? profile.weightKg;

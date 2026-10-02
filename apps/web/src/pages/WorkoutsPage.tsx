@@ -3,7 +3,7 @@ import { PlayCircle, Plus, X, Trash2, Clock, Minus, Zap } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import type { Exercise, ExerciseLogEntry, ScheduledWorkout, UnitSystem, Weekday } from '@fittrack/shared';
 import { EXERCISE_LIBRARY } from '@fittrack/shared';
-import { todayISO } from '@fittrack/shared';
+import { parseISODate, todayISO } from '@fittrack/shared';
 import { computeRestDayInsight } from '@fittrack/shared';
 import { displayWeight, toKgFromDisplay, weightUnitLabel } from '@fittrack/shared';
 import Card from '../components/ui/Card';
@@ -141,7 +141,7 @@ export default function WorkoutsPage() {
                 <div>
                   <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{log.workoutName}</p>
                   <p className="text-xs flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
-                    <Clock size={12} /> {log.durationMin} min · {new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    <Clock size={12} /> {log.durationMin} min · {parseISODate(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     {log.caloriesBurned ? ` · ${log.caloriesBurned} kcal` : ''}
                     {log.exerciseLogs && log.exerciseLogs.length > 0
                       ? ` · ${log.exerciseLogs.reduce((s, e) => s + e.sets.length, 0)} sets logged`
