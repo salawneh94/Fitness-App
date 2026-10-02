@@ -15,7 +15,27 @@ export type SyncTable =
   | 'saved_meals'
   | 'scheduled_workouts'
   | 'workout_logs'
-  | 'progress_photos';
+  | 'progress_photos'
+  | 'water_entries';
+
+/**
+ * The unique key each upsert must resolve conflicts on, for tables where that isn't the primary key.
+ *
+ * PostgREST upserts on the primary key unless told otherwise, and these rows never carry one —
+ * they're identified by (user, day), with `id` left to the database's default. So without this
+ * the second write for a day (correcting a weight, re-applying a plan) inserted a fresh id and hit
+ * the (user_id, date) unique constraint. That failure is permanent, and flush stops at the first
+ * failure to preserve ordering — so one corrected weigh-in silently blocked every write queued
+ * after it, for good. Reproduced against the real migrations in Postgres.
+ */
+const CONFLICT_TARGET: Partial<Record<SyncTable, string>> = {
+  weight_entries: 'user_id,date',
+  steps_entries: 'user_id,date',
+  sleep_entries: 'user_id,date',
+  body_measurements: 'user_id,date',
+  water_entries: 'user_id,date',
+  scheduled_workouts: 'user_id,day',
+};
 
 export interface SyncOp {
   /** table + key uniquely identifies an op; a newer enqueue for the same key replaces the older one. */
@@ -126,7 +146,9 @@ export const useSyncQueue = create<SyncQueueState>()(
             // status work exists to remove.
             const { error } = await withTimeout(
               (stillQueued.op === 'upsert'
-                ? supabase.from(stillQueued.table).upsert(stillQueued.row!)
+                ? supabase
+                    .from(stillQueued.table)
+                    .upsert(stillQueued.row!, { onConflict: CONFLICT_TARGET[stillQueued.table] })
                 : supabase.from(stillQueued.table).delete().match(stillQueued.match!)
               ).then(
                 (result) => ({ error: result.error as { message: string } | null }),
