@@ -3,8 +3,12 @@ import { randomUUID } from 'expo-crypto';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import {
+  INSIGHT_SNOOZE_DAYS,
+  addDaysISO,
+  isDeloadActive,
   todayISO,
   type BodyMeasurementEntry,
+  type Deload,
   type FoodEntry,
   type MealType,
   type Profile,
@@ -46,6 +50,13 @@ interface AppState {
   workoutLogs: WorkoutLogEntry[];
   progressPhotos: ProgressPhoto[];
   savedMeals: SavedMeal[];
+  /**
+   * Plans and "not now"s made from the insights card. Device-local on purpose: both are short-lived
+   * (a deload lasts one session, a snooze a week) and losing one on a new phone costs a tap, which
+   * isn't worth a table, a migration and a sync path each.
+   */
+  deloads: Deload[];
+  insightSnoozes: Record<string, string>;
 
   setProfile: (profile: Profile) => void;
   updateWeight: (weightKg: number) => void;
@@ -71,6 +82,11 @@ interface AppState {
   removeSavedMeal: (id: string) => void;
   logSavedMeal: (mealTemplateId: string, targetMeal: MealType) => void;
 
+  startDeload: (deload: Omit<Deload, 'createdOn'>) => void;
+  cancelDeload: (exerciseId: string) => void;
+  /** Hide an insight (by its key) for INSIGHT_SNOOZE_DAYS. */
+  snoozeInsight: (key: string) => void;
+
   /** Wipes all local state, e.g. after the account it belongs to has been deleted. Does not
    * touch the sync queue or Supabase — the caller is expected to have already deleted the
    * account server-side before calling this. */
@@ -90,6 +106,8 @@ function emptyState(): Pick<
   | 'workoutLogs'
   | 'progressPhotos'
   | 'savedMeals'
+  | 'deloads'
+  | 'insightSnoozes'
 > {
   return {
     profile: null,
@@ -103,7 +121,14 @@ function emptyState(): Pick<
     workoutLogs: [],
     progressPhotos: [],
     savedMeals: [],
+    deloads: [],
+    insightSnoozes: {},
   };
+}
+
+/** Deloads end themselves once a session at another weight is logged; drop the spent ones. */
+function liveDeloads(deloads: Deload[], logs: WorkoutLogEntry[]): Deload[] {
+  return deloads.filter((d) => isDeloadActive(d, logs));
 }
 
 function uid(): string {
@@ -219,7 +244,10 @@ export const useAppStore = create<AppState>()(
 
       addWorkoutLog: (entry) => {
         const full = { ...entry, id: uid() };
-        set((state) => ({ workoutLogs: [...state.workoutLogs, full] }));
+        set((state) => {
+          const workoutLogs = [...state.workoutLogs, full];
+          return { workoutLogs, deloads: liveDeloads(state.deloads, workoutLogs) };
+        });
         const userId = currentUserId();
         if (userId) push.workoutLog(userId, full);
       },
@@ -292,6 +320,28 @@ export const useAppStore = create<AppState>()(
         set((state) => ({ foodEntries: [...state.foodEntries, ...newEntries] }));
         const userId = currentUserId();
         if (userId) for (const entry of newEntries) push.foodEntry(userId, entry);
+      },
+
+      startDeload: (deload) => {
+        set((state) => ({
+          deloads: [
+            ...state.deloads.filter((d) => d.exerciseId !== deload.exerciseId),
+            { ...deload, createdOn: todayISO() },
+          ],
+        }));
+      },
+
+      cancelDeload: (exerciseId) => {
+        set((state) => ({ deloads: state.deloads.filter((d) => d.exerciseId !== exerciseId) }));
+      },
+
+      snoozeInsight: (key) => {
+        const today = todayISO();
+        set((state) => {
+          // Expired snoozes are dropped as new ones are added, so the map can't grow forever.
+          const live = Object.fromEntries(Object.entries(state.insightSnoozes).filter(([, until]) => until > today));
+          return { insightSnoozes: { ...live, [key]: addDaysISO(today, INSIGHT_SNOOZE_DAYS) } };
+        });
       },
 
       resetLocalData: () => set(emptyState()),

@@ -1,6 +1,9 @@
-import type { FoodEntry, Profile, WorkoutLogEntry } from './types';
+import type { FoodEntry, Profile, UnitSystem, WorkoutLogEntry } from './types';
 import { addDaysISO, planDailyTargets, SLEEP_GOAL_HOURS } from './calc';
 import { daysBetween, slopePerDay } from './trend';
+import { deloadWeight } from './progression';
+import { findExercise } from './data/exercises';
+import { displayWeight, weightUnitLabel } from './units';
 
 /** Matches the adaptive-TDEE window, so the two features never describe different periods. */
 export const INSIGHT_WINDOW_DAYS = 28;
@@ -39,14 +42,30 @@ export type InsightId =
   | 'lift_progressing'
   | 'strong_consistency';
 
+/**
+ * The one thing the user can do about an insight, right where they read it.
+ *
+ * Without this every insight ended at a sentence — "drop about 10% and build back up" — and the
+ * user had to go and work out how to do that themselves, which mostly means they didn't.
+ */
+export type InsightAction =
+  | { kind: 'deload'; label: string; exerciseId: string; stalledKg: number; deloadKg: number }
+  | { kind: 'protein_foods'; label: string };
+
 export interface Insight {
   id: InsightId;
+  /**
+   * Identity of this particular observation, for "not now". A plateau on bench at 80 kg is a
+   * different finding from a later one at 85 kg, and dismissing the first mustn't hide the second.
+   */
+  key: string;
   tone: InsightTone;
   title: string;
   /** One sentence naming the evidence, so the claim is checkable rather than mystical. */
   detail: string;
   /** Lower sorts first. Safety outranks goal-blockers, which outrank praise. */
   priority: number;
+  action?: InsightAction;
 }
 
 export interface InsightInput {
@@ -132,6 +151,16 @@ function plural(n: number, word: string): string {
   return `${n} ${word}${n === 1 ? '' : 's'}`;
 }
 
+/** A load in the user's own unit, trimmed: "80 kg", "72.5 kg", "176.4 lb". */
+function load(kg: number, unit: UnitSystem): string {
+  return `${Math.round(displayWeight(kg, unit) * 10) / 10} ${weightUnitLabel(unit)}`;
+}
+
+/** A weekly rate in the user's unit, to two places: "1.40 kg", "3.09 lb". */
+function rate(kg: number, unit: UnitSystem): string {
+  return `${displayWeight(kg, unit).toFixed(2)} ${weightUnitLabel(unit)}`;
+}
+
 /**
  * Turn the data the app already holds into things worth saying.
  *
@@ -152,6 +181,7 @@ function plural(n: number, word: string): string {
  */
 export function deriveInsights(input: InsightInput): Insight[] {
   const { profile, foodEntries, workoutLogs, weights, sleep, today, measuredTDEE } = input;
+  const unit = profile.unitSystem;
   const from = addDaysISO(today, -INSIGHT_WINDOW_DAYS);
   const insights: Insight[] = [];
 
@@ -165,9 +195,10 @@ export function deriveInsights(input: InsightInput): Insight[] {
     if (trend.kgPerWeek < -maxLossPerWeek) {
       insights.push({
         id: 'losing_too_fast',
+        key: 'losing_too_fast',
         tone: 'warning',
         title: "You're losing weight faster than is sustainable",
-        detail: `Down about ${Math.abs(trend.kgPerWeek).toFixed(2)} kg a week over the last ${plural(trend.spanDays, 'day')} — past roughly ${maxLossPerWeek.toFixed(2)} kg a week you start giving up muscle along with fat. Eating a little more would keep the loss and protect the strength.`,
+        detail: `Down about ${rate(Math.abs(trend.kgPerWeek), unit)} a week over the last ${plural(trend.spanDays, 'day')} — past roughly ${rate(maxLossPerWeek, unit)} a week you start giving up muscle along with fat. Eating a little more would keep the loss and protect the strength.`,
         priority: 0,
       });
     }
@@ -182,10 +213,12 @@ export function deriveInsights(input: InsightInput): Insight[] {
       const goalPhrase = profile.goal === 'build_muscle' ? 'building muscle' : 'holding onto muscle while losing fat';
       insights.push({
         id: 'protein_short',
+        key: 'protein_short',
         tone: 'suggestion',
         title: 'Protein is the gap in your nutrition',
         detail: `You hit your ${targets.proteinG}g target on ${hits} of the last ${plural(days.length, 'logged day')}. Protein is the one macro that limits ${goalPhrase}, and it's the easiest of the three to fix.`,
         priority: 1,
+        action: { kind: 'protein_foods', label: 'Show high-protein foods' },
       });
     }
   }
@@ -198,6 +231,7 @@ export function deriveInsights(input: InsightInput): Insight[] {
     const fix = goalDeltaKg < 0 ? 'eating slightly less than you think' : 'eating slightly more than you think';
     insights.push({
       id: 'weight_stalled',
+      key: 'weight_stalled',
       tone: 'suggestion',
       title: 'Your weight has been flat',
       detail: `Barely any movement across ${plural(stallTrend.spanDays, 'day')} and ${plural(stallTrend.count, 'weigh-in')}, while your goal is to ${direction}. Usually that means ${fix}, or that the target needs revisiting — both are worth a look before changing anything drastic.`,
@@ -221,12 +255,31 @@ export function deriveInsights(input: InsightInput): Insight[] {
     }
   }
   if (worstStall) {
+    // The exercise library knows the equipment, which decides what "10% lighter" can actually be
+    // loaded as. An exercise it doesn't know falls back to barbell steps, the coarsest common one.
+    const equipment = findExercise(worstStall.id)?.equipment ?? 'Barbell';
+    const deloadKg = deloadWeight(worstStall.weightKg, equipment);
+    const remedy =
+      deloadKg !== null
+        ? `Dropping to ${load(deloadKg, unit)} for a session and building back up`
+        : 'Changing the rep range or swapping in a variation';
     insights.push({
       id: 'lift_stalled',
+      key: `lift_stalled:${worstStall.id}:${worstStall.weightKg}`,
       tone: 'suggestion',
       title: `${worstStall.name} has stopped moving`,
-      detail: `Same top weight of ${worstStall.weightKg} kg for ${plural(worstStall.sessions, 'session')}. Dropping about 10% and building back up usually breaks a plateau faster than grinding at the same load.`,
+      detail: `Same top weight of ${load(worstStall.weightKg, unit)} for ${plural(worstStall.sessions, 'session')}. ${remedy} usually breaks a plateau faster than grinding at the same load.`,
       priority: 3,
+      action:
+        deloadKg !== null
+          ? {
+              kind: 'deload',
+              label: `Deload to ${load(deloadKg, unit)}`,
+              exerciseId: worstStall.id,
+              stalledKg: worstStall.weightKg,
+              deloadKg,
+            }
+          : undefined,
     });
   }
 
@@ -236,6 +289,7 @@ export function deriveInsights(input: InsightInput): Insight[] {
     if (mean < SLEEP_GOAL_HOURS - 1.5) {
       insights.push({
         id: 'sleep_short',
+        key: 'sleep_short',
         tone: 'suggestion',
         title: 'Short sleep is working against your training',
         detail: `Averaging ${mean.toFixed(1)} hours across ${plural(nights.length, 'night')}. Recovery is when training turns into progress, and under-sleeping blunts both strength gains and appetite control.`,
@@ -262,8 +316,9 @@ export function deriveInsights(input: InsightInput): Insight[] {
   if (bestGain) {
     wins.push({
       id: 'lift_progressing',
+      key: `lift_progressing:${bestGain.name}`,
       tone: 'win',
-      title: `${bestGain.name} is up ${bestGain.gainKg} kg`,
+      title: `${bestGain.name} is up ${load(bestGain.gainKg, unit)}`,
       detail: `Across ${plural(bestGain.sessions, 'session')} in the last four weeks. That's progressive overload doing exactly what it should.`,
       priority: 10,
     });
@@ -276,6 +331,7 @@ export function deriveInsights(input: InsightInput): Insight[] {
   if (possibleDays > 0 && activeDays.size / possibleDays >= STRONG_ADHERENCE) {
     wins.push({
       id: 'strong_consistency',
+      key: 'strong_consistency',
       tone: 'win',
       title: `${activeDays.size} of the last ${possibleDays} days logged`,
       detail: 'Consistency is the whole game, and this is what it looks like. It also makes every number FitTrack shows you more accurate.',
@@ -289,4 +345,22 @@ export function deriveInsights(input: InsightInput): Insight[] {
   }
 
   return insights.sort((a, b) => a.priority - b.priority);
+}
+
+/** How long "not now" hides an insight. Long enough to stop nagging, short enough to come back. */
+export const INSIGHT_SNOOZE_DAYS = 7;
+
+/**
+ * Drop insights the user has said "not now" to, until the snooze runs out.
+ *
+ * A card that repeats the same advice every time the app opens stops being read within a week —
+ * and then it isn't read on the day it says something new. Snoozing is keyed on the specific
+ * observation (see Insight.key), so a *different* plateau, or the same lift stalling again at a
+ * new weight, still gets through.
+ */
+export function withoutSnoozed(insights: Insight[], snoozedUntil: Record<string, string>, today: string): Insight[] {
+  return insights.filter((i) => {
+    const until = snoozedUntil[i.key];
+    return !until || until <= today;
+  });
 }

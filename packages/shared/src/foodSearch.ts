@@ -141,3 +141,49 @@ export function servingLabelFor(grams: number, servings: ServingOption[]): strin
   const match = servings.find((s) => Math.abs(s.grams - g) < 0.05);
   return match ? `${match.label} (${g} g)` : `${g} g`;
 }
+
+/** A serving has to carry at least this much protein to be worth suggesting for a protein gap. */
+const MIN_PROTEIN_PER_SERVING_G = 15;
+/**
+ * …and protein has to be a real share of its calories: 6 g per 100 kcal is about a quarter of the
+ * energy. Without this a 2,600 kcal pasta bake qualified on its 60 g, and was offered as a fix for
+ * a protein gap while blowing the day's calories.
+ */
+const MIN_PROTEIN_PER_100_KCAL = 6;
+
+function proteinDensity(proteinG: number, calories: number): number {
+  // Protein per 100 kcal: the measure that matters when the calories are budgeted. Grams per
+  // serving alone would rank peanut butter (25 g per 100 g, at 588 kcal) above egg whites.
+  return calories > 0 ? (proteinG / calories) * 100 : 0;
+}
+
+/**
+ * Foods that close a protein gap without blowing the calorie budget, best first.
+ *
+ * The user's own foods come first — something they already buy and like beats a better ratio
+ * they'll never eat — then staples, judged on their natural serving. Both lists need a serving to
+ * carry real protein: a cup of spinach is protein-dense per calorie and useless for this.
+ */
+export function highProteinPicks(
+  recents: RecentFood[],
+  staples: GenericFood[] = GENERIC_FOODS,
+  limit = 5
+): { mine: RecentFood[]; staples: GenericFood[] } {
+  const mine = recents
+    .filter((f) => f.proteinG * f.quantity >= MIN_PROTEIN_PER_SERVING_G)
+    .filter((f) => proteinDensity(f.proteinG, f.calories) >= MIN_PROTEIN_PER_100_KCAL)
+    .sort((a, b) => proteinDensity(b.proteinG, b.calories) - proteinDensity(a.proteinG, a.calories))
+    .slice(0, limit);
+
+  const ranked = staples
+    .map((f) => {
+      const grams = f.servings[0]?.grams ?? 100;
+      const serving = scalePer100g(f.per100g, grams);
+      return { food: f, serving, density: proteinDensity(f.per100g.proteinG, f.per100g.calories) };
+    })
+    .filter((x) => x.serving.proteinG >= MIN_PROTEIN_PER_SERVING_G && x.density >= MIN_PROTEIN_PER_100_KCAL)
+    .sort((a, b) => b.density - a.density)
+    .map((x) => x.food);
+
+  return { mine, staples: ranked.slice(0, limit) };
+}

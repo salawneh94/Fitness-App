@@ -7,6 +7,7 @@ import {
   addDaysISO,
   colors,
   foodsFromDay,
+  highProteinPicks,
   normalizeFoodText,
   recentFoods,
   scalePer100g,
@@ -126,7 +127,16 @@ function stapleToCandidate(food: GenericFood): FoodCandidate {
   return { name: food.name, per100g: food.per100g, servings: food.servings, source: 'search' };
 }
 
-export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClose: () => void }) {
+export default function AddFoodModal({
+  meal,
+  onClose,
+  highlight,
+}: {
+  meal: MealType;
+  onClose: () => void;
+  /** Open on a focused list — the protein insight sends people here to act on it. */
+  highlight?: 'protein';
+}) {
   const addFoodEntry = useAppStore((s) => s.addFoodEntry);
   const foodEntries = useAppStore((s) => s.foodEntries);
   const savedMeals = useAppStore((s) => s.savedMeals);
@@ -143,11 +153,21 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
   // wider pool is what gets searched: something eaten forty foods ago should still be findable by
   // name even though it's long gone from the top-12 list.
   const recentPool = useMemo(() => recentFoods(foodEntries, meal, 300), [foodEntries, meal]);
-  const recents = useMemo(() => recentPool.slice(0, 12), [recentPool]);
+
   const yesterdays = useMemo(
     () => foodsFromDay(foodEntries, addDaysISO(todayISO(), -1), meal),
     [foodEntries, meal]
   );
+
+  const proteinPicks = useMemo(
+    () => (highlight === 'protein' ? highProteinPicks(recentPool) : null),
+    [highlight, recentPool]
+  );
+  // A food already offered as a protein pick isn't listed a second time under Recent.
+  const recents = useMemo(() => {
+    const picked = new Set(proteinPicks?.mine.map(recentKey));
+    return recentPool.filter((f) => !picked.has(recentKey(f))).slice(0, 12);
+  }, [recentPool, proteinPicks]);
 
   const normalizedQuery = normalizeFoodText(query);
   const searching = normalizedQuery.length > 0;
@@ -397,6 +417,45 @@ export default function AddFoodModal({ meal, onClose }: { meal: MealType; onClos
                 </>
               ) : (
                 <>
+                  {proteinPicks && (proteinPicks.mine.length > 0 || proteinPicks.staples.length > 0) && (
+                    <View className="gap-3">
+                      <View>
+                        <SectionLabel>High-protein picks</SectionLabel>
+                        <Text className="text-xs -mt-1 mb-2" style={{ color: colors.textMuted }}>
+                          Most protein for the calories — your own foods first.
+                        </Text>
+                        {proteinPicks.mine.length > 0 && (
+                          <FoodList
+                            items={proteinPicks.mine}
+                            keyOf={recentKey}
+                            title={(f) => f.name}
+                            sub={(f) => `${Math.round(f.proteinG * f.quantity)} g protein · ${f.quantity} × ${f.servingLabel ?? 'serving'}`}
+                            trailing={(f) => `${Math.round(f.calories * f.quantity)} kcal`}
+                            haptic="success"
+                            onPress={(f) => {
+                              logRecent(f);
+                              onClose();
+                            }}
+                          />
+                        )}
+                      </View>
+                      {proteinPicks.staples.length > 0 && (
+                        <FoodList
+                          items={proteinPicks.staples}
+                          keyOf={(f) => f.id}
+                          title={(f) => f.name}
+                          sub={(f) => {
+                            const grams = f.servings[0]?.grams ?? 100;
+                            const label = f.servings[0]?.label ?? '100 g';
+                            return `${Math.round(scalePer100g(f.per100g, grams).proteinG)} g protein · ${label}`;
+                          }}
+                          trailing={(f) => `${scalePer100g(f.per100g, f.servings[0]?.grams ?? 100).calories} kcal`}
+                          onPress={(f) => openConfirm(stapleToCandidate(f))}
+                        />
+                      )}
+                    </View>
+                  )}
+
                   {/* Repeat and recents come first, above scan and manual entry: for anyone past
                       their first week these are the paths that get used, and burying them under
                       "Scan Barcode" is what makes logging feel like data entry. */}

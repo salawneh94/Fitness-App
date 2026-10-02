@@ -3,7 +3,7 @@ import { Check, ChevronLeft, ChevronRight, Pause, Play, PlayCircle, Plus, SkipFo
 import { Modal, Text, View } from 'react-native';
 import type { ExerciseLogEntry, ScheduledWorkout, UnitSystem } from '@fittrack/shared';
 import { displayWeight, toKgFromDisplay, weightUnitLabel } from '@fittrack/shared';
-import { lastPerformance, suggestNextLoad } from '@fittrack/shared';
+import { deloadWeight, lastPerformance, parseRepRange, suggestNextLoad } from '@fittrack/shared';
 import { useAppStore } from '@/store/useAppStore';
 import ExerciseVideoModal from './exercise-video-modal';
 import Confetti from './confetti';
@@ -48,10 +48,28 @@ export default function GuidedWorkoutPlayer({
   const isLast = exerciseIndex === workout.exercises.length - 1;
 
   const workoutLogs = useAppStore((s) => s.workoutLogs);
+  const deload = useAppStore((s) => s.deloads.find((d) => d.exerciseId === exercise.id));
+  const startDeload = useAppStore((s) => s.startDeload);
   const suggestion = useMemo(() => {
     const previous = lastPerformance(workoutLogs, exercise.id);
-    return previous ? suggestNextLoad(previous, exercise, workoutLogs) : null;
-  }, [workoutLogs, exercise]);
+    return previous ? suggestNextLoad(previous, exercise, workoutLogs, deload) : null;
+  }, [workoutLogs, exercise, deload]);
+
+  // Where the player has been saying "if it stalls again, try dropping 10%", it can now just do it.
+  const offerDeload =
+    suggestion?.action === 'add_reps' && suggestion.sessionsAtWeight >= 3
+      ? deloadWeight(suggestion.previous.weightKg, exercise.equipment)
+      : null;
+
+  function deloadNow(deloadKg: number) {
+    if (!suggestion) return;
+    startDeload({ exerciseId: exercise.id, stalledKg: suggestion.previous.weightKg, deloadKg });
+    // The prefill only runs when the exercise changes, so a plan made mid-screen fills the fields
+    // itself — otherwise the button would change the advice but leave the old numbers in the boxes.
+    setDraftWeight(String(fmt(deloadKg)));
+    const range = parseRepRange(exercise.reps);
+    if (range) setDraftReps(String(range.max));
+  }
 
   /** Weights are stored in kg; the player shows whatever unit the user picked. */
   const fmt = (kg: number) => Math.round(displayWeight(kg, unit) * 10) / 10;
@@ -233,20 +251,42 @@ export default function GuidedWorkoutPlayer({
                   <Text className="text-sm font-semibold" style={{ color: '#22d3ee' }}>
                     {suggestion.action === 'increase_weight'
                       ? `Try ${fmt(suggestion.weightKg)} ${weightUnitLabel(unit)} × ${suggestion.targetReps}`
-                      : suggestion.action === 'add_reps'
-                        ? `Aim for ${suggestion.targetReps} reps at ${fmt(suggestion.weightKg)} ${weightUnitLabel(unit)}`
-                        : `Hold ${suggestion.targetReps} reps — add load when you can`}
+                      : suggestion.action === 'deload'
+                        ? `Deload: ${fmt(suggestion.weightKg)} ${weightUnitLabel(unit)} × ${suggestion.targetReps}`
+                        : suggestion.action === 'add_reps'
+                          ? `Aim for ${suggestion.targetReps} reps at ${fmt(suggestion.weightKg)} ${weightUnitLabel(unit)}`
+                          : `Hold ${suggestion.targetReps} reps — add load when you can`}
                   </Text>
+                  {suggestion.action === 'deload' && (
+                    <Text className="text-xs text-white/40 mt-0.5 text-center">
+                      A lighter session to break the plateau — hit every rep and the weight climbs back from here
+                    </Text>
+                  )}
                   {suggestion.action === 'increase_weight' && (
                     <Text className="text-xs text-white/40 mt-0.5">
                       You hit the top of the range on every set
                     </Text>
                   )}
                   {suggestion.action === 'add_reps' && suggestion.sessionsAtWeight >= 3 && (
-                    <Text className="text-xs text-white/40 mt-0.5">
-                      {suggestion.sessionsAtWeight} sessions at this weight — if it stalls again, try dropping
-                      10% and building back
-                    </Text>
+                    <View className="items-center mt-1">
+                      <Text className="text-xs text-white/40 text-center">
+                        {suggestion.sessionsAtWeight} sessions at this weight
+                        {offerDeload !== null ? ' — a lighter session often breaks it' : ''}
+                      </Text>
+                      {offerDeload !== null && (
+                        <PressableScale
+                          hapticStyle="selection"
+                          accessibilityRole="button"
+                          onPress={() => deloadNow(offerDeload)}
+                          className="mt-2 px-3 py-1.5 rounded-full border"
+                          style={{ borderColor: 'rgba(34,211,238,0.5)' }}
+                        >
+                          <Text className="text-xs font-medium" style={{ color: '#22d3ee' }}>
+                            Deload to {fmt(offerDeload)} {weightUnitLabel(unit)} instead
+                          </Text>
+                        </PressableScale>
+                      )}
+                    </View>
                   )}
                 </View>
               )}

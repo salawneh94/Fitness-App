@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GENERIC_FOODS } from './data/genericFoods';
-import { normalizeFoodText, scalePer100g, searchGenericFoods, searchRecentFoods, servingLabelFor } from './foodSearch';
+import { highProteinPicks, normalizeFoodText, scalePer100g, searchGenericFoods, searchRecentFoods, servingLabelFor } from './foodSearch';
 import type { RecentFood } from './foodHistory';
 
 const names = (query: string, limit?: number) => searchGenericFoods(query, limit).map((f) => f.name);
@@ -115,5 +115,45 @@ describe('servingLabelFor', () => {
     const servings = [{ label: '1 medium', grams: 118 }];
     expect(servingLabelFor(118, servings)).toBe('1 medium (118 g)');
     expect(servingLabelFor(150, servings)).toBe('150 g');
+  });
+});
+
+describe('highProteinPicks', () => {
+  const recent = (name: string, calories: number, proteinG: number, quantity = 1): RecentFood => ({
+    name, quantity, calories, proteinG, carbsG: 0, fatG: 0, source: 'manual',
+  });
+
+  it('ranks the user’s own foods by protein per calorie', () => {
+    const picks = highProteinPicks([
+      recent('Chicken wrap', 500, 35), //       7 g / 100 kcal
+      recent('Protein shake', 150, 30), //      20 g / 100 kcal
+    ]);
+    expect(picks.mine.map((f) => f.name)).toEqual(['Protein shake', 'Chicken wrap']);
+  });
+
+  it('needs both real protein per serving and a real share of the calories', () => {
+    const picks = highProteinPicks([
+      recent('Egg', 78, 6), //                     dense, but only 6 g a serving
+      recent('Peanut butter toast', 400, 16), //   16 g, but 4 g / 100 kcal
+      recent('Pasta bake', 2600, 60), //           60 g, but 2.3 g / 100 kcal — a calorie bomb, not a fix
+    ]);
+    expect(picks.mine).toEqual([]);
+  });
+
+  it('counts the whole logged serving, not one unit of it', () => {
+    expect(highProteinPicks([recent('Egg', 78, 6, 3)]).mine).toHaveLength(1); // 3 eggs = 18 g
+  });
+
+  it('suggests staples whose natural serving carries real protein, leanest first', () => {
+    const { staples } = highProteinPicks([]);
+    expect(staples.length).toBe(5);
+    for (const f of staples) {
+      const serving = scalePer100g(f.per100g, f.servings[0]?.grams ?? 100);
+      expect(serving.proteinG).toBeGreaterThanOrEqual(15);
+    }
+    // A cup of spinach is protein-dense per calorie and useless here; peanut butter is the reverse.
+    const names = staples.map((f) => f.name);
+    expect(names).not.toContain('Spinach, raw');
+    expect(names).not.toContain('Peanut butter');
   });
 });

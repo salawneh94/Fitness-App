@@ -72,7 +72,46 @@ export function lastPerformance(logs: WorkoutLogEntry[], exerciseId: string): La
   return best;
 }
 
-export type ProgressionAction = 'increase_weight' | 'add_reps' | 'hold';
+export type ProgressionAction = 'increase_weight' | 'add_reps' | 'hold' | 'deload';
+
+/**
+ * A planned step back on one lift, to break a plateau.
+ *
+ * It only ever changes one suggestion — the next session's — and needs no "end" of its own: once
+ * a session is logged at any top weight other than `stalledKg`, the plateau is broken (or at
+ * least changed), the deload no longer applies, and double progression builds back up from
+ * whatever was actually lifted. Skip the deload and log the stalled weight again, and it simply
+ * stays on offer.
+ */
+export interface Deload {
+  exerciseId: string;
+  stalledKg: number;
+  deloadKg: number;
+  createdOn: string;
+}
+
+/**
+ * About 10% lighter, on a weight the user can actually load.
+ *
+ * Snapped to the equipment's increment (so a barbell deload from 80 lands on 72.5, not 72), and
+ * always strictly lighter than the stall — rounding must never turn a deload into the same weight.
+ * Null when nothing lighter can be loaded (stuck on the lightest dumbbell): there, a deload isn't
+ * available, and offering "deload to 2 kg" to someone at 2 kg would be nonsense.
+ */
+export function deloadWeight(stalledKg: number, equipment: string): number | null {
+  // Bodyweight-loaded lifts have no increment of their own; a kilo is the finest anyone loads.
+  const step = incrementForEquipment(equipment) || 1;
+  let target = Math.round((stalledKg * 0.9) / step) * step;
+  if (target >= stalledKg) target = stalledKg - step;
+  target = Math.round(target * 100) / 100;
+  return target >= step ? target : null;
+}
+
+/** Still waiting to be used: the last logged session is still at the weight that stalled. */
+export function isDeloadActive(deload: Deload, logs: WorkoutLogEntry[]): boolean {
+  const last = lastPerformance(logs, deload.exerciseId);
+  return last !== null && topWeight(last.log.sets) === deload.stalledKg;
+}
 
 export interface LoadSuggestion {
   /** Weight to put on the bar next session. */
@@ -110,7 +149,8 @@ function topWeight(sets: SetEntry[]): number {
 export function suggestNextLoad(
   performance: LastPerformance,
   exercise: Pick<Exercise, 'equipment' | 'reps'>,
-  history: WorkoutLogEntry[] = []
+  history: WorkoutLogEntry[] = [],
+  deload?: Deload
 ): LoadSuggestion | null {
   const range = parseRepRange(exercise.reps);
   if (!range) return null; // timed holds and the like have nothing to progress
@@ -134,6 +174,20 @@ export function suggestNextLoad(
     sessionsAtWeight += 1;
   }
   sessionsAtWeight = Math.max(1, sessionsAtWeight);
+
+  // A deload the user asked for overrides the usual rule — but only while it still applies, i.e.
+  // they're still at the weight that stalled. Reps go to the top of the range: at a lighter load
+  // they're achievable, and hitting them is exactly what earns the climb back.
+  if (deload && deload.exerciseId === performance.log.exerciseId && weight === deload.stalledKg) {
+    return {
+      weightKg: deload.deloadKg,
+      targetReps: range.max,
+      action: 'deload',
+      incrementKg: increment,
+      previous,
+      sessionsAtWeight,
+    };
+  }
 
   const everySetAtTop = reps.every((r) => r >= range.max);
 
