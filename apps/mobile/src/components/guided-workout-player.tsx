@@ -1,9 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Pause, Play, PlayCircle, Plus, SkipForward, X } from 'lucide-react-native';
-import { Modal, Text, View } from 'react-native';
-import type { ExerciseLogEntry, ScheduledWorkout, UnitSystem } from '@fittrack/shared';
-import { displayWeight, toKgFromDisplay, weightUnitLabel } from '@fittrack/shared';
-import { deloadWeight, lastPerformance, parseRepRange, suggestNextLoad } from '@fittrack/shared';
+import { Check, ChevronLeft, ChevronRight, Pause, Play, PlayCircle, Plus, Repeat, SkipForward, Trophy, X } from 'lucide-react-native';
+import { Modal, ScrollView, Text, View } from 'react-native';
+import type { Exercise, ExerciseLogEntry, PersonalRecord, ScheduledWorkout, UnitSystem } from '@fittrack/shared';
+import { colors, displayWeight, toKgFromDisplay, weightUnitLabel } from '@fittrack/shared';
+import {
+  EXERCISE_LIBRARY,
+  deloadWeight,
+  findPersonalRecords,
+  lastPerformance,
+  parseRepRange,
+  suggestNextLoad,
+  swapCandidates,
+} from '@fittrack/shared';
 import { useAppStore } from '@/store/useAppStore';
 import ExerciseVideoModal from './exercise-video-modal';
 import Confetti from './confetti';
@@ -44,8 +52,12 @@ export default function GuidedWorkoutPlayer({
   const [draftReps, setDraftReps] = useState('');
   const [showVideo, setShowVideo] = useState(false);
 
-  const exercise = workout.exercises[exerciseIndex];
-  const isLast = exerciseIndex === workout.exercises.length - 1;
+  // The session's own copy, so an exercise can be swapped for today without touching the plan.
+  const [exercises, setExercises] = useState<Exercise[]>(workout.exercises);
+  const [swapping, setSwapping] = useState(false);
+  const [swapChoice, setSwapChoice] = useState<Exercise | null>(null);
+  const exercise = exercises[exerciseIndex];
+  const isLast = exerciseIndex === exercises.length - 1;
 
   const workoutLogs = useAppStore((s) => s.workoutLogs);
   const deload = useAppStore((s) => s.deloads.find((d) => d.exerciseId === exercise.id));
@@ -113,6 +125,39 @@ export default function GuidedWorkoutPlayer({
     return () => clearTimeout(id);
   }, [resting, restSeconds, running]);
 
+  // Same muscles, same kind of work; nothing already in today's session (two entries with one id
+  // would share their logged sets).
+  const alternatives = useMemo(() => {
+    const notInSession = (c: Exercise) => !exercises.some((e) => e.id === c.id);
+    const { close, other } = swapCandidates(exercise, EXERCISE_LIBRARY);
+    return { close: close.filter(notInSession), other: other.filter(notInSession) };
+  }, [exercise, exercises]);
+  const hasAlternatives = alternatives.close.length + alternatives.other.length > 0;
+
+  /**
+   * Put another exercise in this slot — for today, or in the plan too.
+   *
+   * The gym being out of a bench used to mean skipping the exercise or abandoning the plan. The
+   * slot keeps the plan's set count, but takes the new exercise's own rep range: 8–12 on a cable
+   * fly isn't 6–10 on a barbell press. The next-load suggestion then comes from the new
+   * exercise's own history, since the prefill re-runs on the exercise changing.
+   */
+  function applySwap(alt: Exercise, inPlan: boolean) {
+    const original = exercise;
+    const replacement: Exercise = { ...alt, sets: original.sets ?? alt.sets };
+    setExercises((prev) => prev.map((e, i) => (i === exerciseIndex ? replacement : e)));
+    if (inPlan) {
+      const { scheduledWorkouts, setScheduledWorkouts } = useAppStore.getState();
+      setScheduledWorkouts(
+        scheduledWorkouts.map((w) =>
+          w.id === workout.id ? { ...w, exercises: w.exercises.map((e) => (e.id === original.id ? replacement : e)) } : w
+        )
+      );
+    }
+    setSwapping(false);
+    setSwapChoice(null);
+  }
+
   function logSet() {
     if (draftWeight === '' && draftReps === '') return;
     const weightKg = draftWeight === '' ? 0 : toKgFromDisplay(Number(draftWeight), unit);
@@ -135,7 +180,7 @@ export default function GuidedWorkoutPlayer({
       setRunning(false);
       setShowFinish(true);
     } else {
-      setExerciseIndex((i) => Math.min(workout.exercises.length - 1, i + 1));
+      setExerciseIndex((i) => Math.min(exercises.length - 1, i + 1));
     }
   }
 
@@ -146,15 +191,16 @@ export default function GuidedWorkoutPlayer({
   }
 
   if (showFinish) {
+    const exerciseLogs: ExerciseLogEntry[] = exercises
+      .filter((ex) => (setsByExercise[ex.id] ?? []).length > 0)
+      .map((ex) => ({ exerciseId: ex.id, exerciseName: ex.name, sets: setsByExercise[ex.id] }));
     return (
       <FinishScreen
         durationMin={Math.max(1, Math.round(elapsedSec / 60))}
         setsByExercise={setsByExercise}
         workout={workout}
+        records={findPersonalRecords(exerciseLogs, workoutLogs, unit)}
         onSave={(caloriesBurned, notes) => {
-          const exerciseLogs: ExerciseLogEntry[] = workout.exercises
-            .filter((ex) => (setsByExercise[ex.id] ?? []).length > 0)
-            .map((ex) => ({ exerciseId: ex.id, exerciseName: ex.name, sets: setsByExercise[ex.id] }));
           onFinish(Math.max(1, Math.round(elapsedSec / 60)), exerciseLogs, caloriesBurned, notes);
         }}
         onBack={() => setShowFinish(false)}
@@ -170,7 +216,7 @@ export default function GuidedWorkoutPlayer({
             <X size={20} color="white" />
           </PressableScale>
           <Text className="text-sm font-medium text-white/70">
-            Exercise {exerciseIndex + 1} / {workout.exercises.length}
+            Exercise {exerciseIndex + 1} / {exercises.length}
           </Text>
           <Text className="text-sm font-medium text-white/70">{formatClock(elapsedSec)}</Text>
         </View>
@@ -179,7 +225,7 @@ export default function GuidedWorkoutPlayer({
           <View className="h-1 rounded-full overflow-hidden bg-white/10">
             <View
               className="h-full bg-cyan-500"
-              style={{ width: `${((exerciseIndex + 1) / workout.exercises.length) * 100}%` }}
+              style={{ width: `${((exerciseIndex + 1) / exercises.length) * 100}%` }}
             />
           </View>
         </View>
@@ -219,12 +265,98 @@ export default function GuidedWorkoutPlayer({
               <Text className="text-white/60 mb-6 text-center">
                 {exercise.sets && exercise.reps ? `${exercise.sets} sets × ${exercise.reps}` : exercise.notes ?? 'Log your sets below'}
               </Text>
-              <PressableScale onPress={() => setShowVideo(true)} className="flex-row items-center gap-1.5 mb-8">
-                <PlayCircle size={16} color={'#22d3ee'} />
-                <Text className="text-sm" style={{ color: '#22d3ee' }}>
-                  Watch demo
-                </Text>
-              </PressableScale>
+              <View className="flex-row items-center gap-5 mb-8">
+                <PressableScale onPress={() => setShowVideo(true)} className="flex-row items-center gap-1.5">
+                  <PlayCircle size={16} color={'#22d3ee'} />
+                  <Text className="text-sm" style={{ color: '#22d3ee' }}>
+                    Watch demo
+                  </Text>
+                </PressableScale>
+                {/* Only before the first set: swapping half-way through would split one
+                    exercise's sets across two. */}
+                {setsForExercise.length === 0 && hasAlternatives && (
+                  <PressableScale
+                    accessibilityRole="button"
+                    accessibilityLabel={`Swap ${exercise.name}`}
+                    onPress={() => setSwapping(true)}
+                    className="flex-row items-center gap-1.5"
+                  >
+                    <Repeat size={15} color="rgba(255,255,255,0.7)" />
+                    <Text className="text-sm text-white/70">Swap exercise</Text>
+                  </PressableScale>
+                )}
+              </View>
+              {swapping && (
+                <Modal visible transparent animationType="slide" onRequestClose={() => setSwapping(false)}>
+                  <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
+                    <View className="rounded-t-3xl px-5 pt-5 pb-8" style={{ backgroundColor: '#111827', maxHeight: '80%' }}>
+                      <Text className="text-lg font-bold text-white">Swap {exercise.name}</Text>
+                      <Text className="text-xs text-white/50 mt-1 mb-4">
+                        Different equipment is listed first in each group.
+                      </Text>
+                      <ScrollView style={{ flexGrow: 0 }}>
+                        {(
+                          [
+                            ['Closest match — same movement', alternatives.close],
+                            [`Also works your ${exercise.category.replace('_', ' ')}`, alternatives.other],
+                          ] as const
+                        ).map(([heading, group]) => group.length > 0 && (
+                        <View key={heading} className="gap-2 mb-4">
+                          <Text className="text-[11px] font-semibold uppercase tracking-wide text-white/40">{heading}</Text>
+                          {group.map((alt) => {
+                            const chosen = swapChoice?.id === alt.id;
+                            return (
+                              <PressableScale
+                                key={alt.id}
+                                hapticStyle="selection"
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: chosen }}
+                                onPress={() => setSwapChoice(alt)}
+                                className="flex-row items-center justify-between px-4 py-3 rounded-2xl border"
+                                style={{ borderColor: chosen ? '#22d3ee' : 'rgba(255,255,255,0.12)', backgroundColor: chosen ? 'rgba(34,211,238,0.10)' : 'transparent' }}
+                              >
+                                <View className="flex-1 min-w-0">
+                                  <Text className="text-sm font-medium text-white" numberOfLines={1}>{alt.name}</Text>
+                                  <Text className="text-xs text-white/50">{alt.equipment} · {alt.reps}</Text>
+                                </View>
+                                {chosen && <Check size={16} color="#22d3ee" />}
+                              </PressableScale>
+                            );
+                          })}
+                        </View>
+                        ))}
+                      </ScrollView>
+                      <View className="flex-row gap-2 mt-4">
+                        <PressableScale
+                          disabled={!swapChoice}
+                          onPress={() => swapChoice && applySwap(swapChoice, false)}
+                          className="flex-1 py-3 rounded-full bg-cyan-600 items-center"
+                          style={{ opacity: swapChoice ? 1 : 0.4 }}
+                        >
+                          <Text className="text-white text-sm font-semibold">Just today</Text>
+                        </PressableScale>
+                        <PressableScale
+                          disabled={!swapChoice}
+                          onPress={() => swapChoice && applySwap(swapChoice, true)}
+                          className="flex-1 py-3 rounded-full border border-white/25 items-center"
+                          style={{ opacity: swapChoice ? 1 : 0.4 }}
+                        >
+                          <Text className="text-white text-sm font-medium">Swap in my plan too</Text>
+                        </PressableScale>
+                      </View>
+                      <PressableScale
+                        onPress={() => {
+                          setSwapping(false);
+                          setSwapChoice(null);
+                        }}
+                        className="items-center pt-4"
+                      >
+                        <Text className="text-sm text-white/50">Cancel</Text>
+                      </PressableScale>
+                    </View>
+                  </View>
+                </Modal>
+              )}
               {showVideo && <ExerciseVideoModal exercise={exercise} onClose={() => setShowVideo(false)} />}
 
               {setsForExercise.length > 0 && (
@@ -343,12 +475,14 @@ function FinishScreen({
   durationMin,
   setsByExercise,
   workout,
+  records,
   onSave,
   onBack,
 }: {
   durationMin: number;
   setsByExercise: Record<string, { weightKg: number; reps: number }[]>;
   workout: ScheduledWorkout;
+  records: PersonalRecord[];
   onSave: (caloriesBurned: number | undefined, notes: string | undefined) => void;
   onBack: () => void;
 }) {
@@ -372,6 +506,27 @@ function FinishScreen({
             <Text className="text-xs text-white/50">sets logged</Text>
           </View>
         </View>
+        {/* The moment that makes training feel like it's working — every set needed to notice it
+            was already being logged. */}
+        {records.length > 0 && (
+          <View className="w-full max-w-xs mb-6 rounded-2xl p-4" style={{ backgroundColor: 'rgba(251,191,36,0.10)' }}>
+            <View className="flex-row items-center gap-2 mb-2">
+              <Trophy size={16} color={colors.brandLime} />
+              <Text className="text-xs font-semibold uppercase tracking-wide" style={{ color: colors.brandLime }}>
+                {records.length === 1 ? 'New personal best' : `${records.length} new personal bests`}
+              </Text>
+            </View>
+            <View className="gap-2">
+              {records.map((r) => (
+                <View key={r.exerciseId}>
+                  <Text className="text-sm font-semibold text-white">{r.exerciseName}</Text>
+                  <Text className="text-sm text-white/80">{r.headline}</Text>
+                  <Text className="text-xs text-white/50">{r.detail}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
         <View className="w-full max-w-xs gap-3 mb-6">
           <TextField
             keyboardType="numeric"

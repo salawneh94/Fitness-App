@@ -218,3 +218,69 @@ export function suggestNextLoad(
     sessionsAtWeight,
   };
 }
+
+/**
+ * What each library exercise actually does, finer than its muscle-group category.
+ *
+ * "Legs" holds both a back squat and a calf raise; offering one as a swap for the other is no
+ * swap at all. The pattern is what makes a substitute train the same thing — and it crosses
+ * categories where the library's filing does: a deadlift ("back") and a Romanian deadlift
+ * ("glutes") are both hinges. A test keeps every library exercise in this table.
+ */
+export const MOVEMENT_PATTERN: Record<string, string> = {
+  // pushes
+  'bench-press': 'horizontal_push', 'decline-bench-press': 'horizontal_push', 'decline-db-press': 'horizontal_push',
+  'incline-db-press': 'horizontal_push', 'push-up': 'horizontal_push', dips: 'horizontal_push',
+  ohp: 'vertical_push', 'arnold-press': 'vertical_push',
+  'cable-fly': 'chest_fly', 'pec-deck-fly': 'chest_fly',
+  // pulls
+  'barbell-row': 'horizontal_pull', 'chest-supported-row': 'horizontal_pull', 'single-arm-db-row': 'horizontal_pull', 't-bar-row': 'horizontal_pull',
+  'lat-pulldown': 'vertical_pull', 'pull-up': 'vertical_pull',
+  // lower body
+  squat: 'squat', 'front-squat': 'squat', 'goblet-squat': 'squat', 'leg-press': 'squat',
+  lunge: 'lunge', 'bulgarian-split-squat': 'lunge', 'step-up': 'lunge',
+  deadlift: 'hinge', 'rack-pull': 'hinge', rdl: 'hinge', 'sumo-deadlift': 'hinge', 'kettlebell-swing': 'hinge',
+  'hip-thrust': 'hip_extension', 'glute-bridge': 'hip_extension', 'cable-kickback': 'hip_extension',
+  'leg-curl': 'knee_flexion', 'leg-extension': 'knee_extension', 'calf-raise': 'calf',
+  // arms & shoulders
+  'barbell-curl': 'biceps', 'hammer-curl': 'biceps', 'preacher-curl': 'biceps',
+  'skull-crusher': 'triceps', 'tricep-pushdown': 'triceps', 'close-grip-bench-press': 'triceps',
+  'lateral-raise': 'shoulder_raise', 'front-raise': 'shoulder_raise', 'face-pull': 'rear_delt', shrugs: 'shrug',
+  // core
+  plank: 'anti_extension', 'ab-wheel-rollout': 'anti_extension', 'dead-bug': 'anti_extension', 'side-plank': 'anti_lateral',
+  'bicycle-crunch': 'trunk_flexion', 'cable-crunch': 'trunk_flexion', 'hanging-leg-raise': 'trunk_flexion', 'russian-twist': 'rotation',
+  // conditioning
+  burpee: 'conditioning', 'mountain-climber': 'conditioning', 'jumping-jack': 'conditioning', thruster: 'squat_press',
+  running: 'cardio', 'jump-rope': 'cardio', 'rowing-machine': 'cardio', cycling: 'cardio',
+};
+
+export interface SwapOptions {
+  /** Same movement pattern — a true substitute, from any muscle group. */
+  close: Exercise[];
+  /** The rest of the same muscle group — still works the area, less like-for-like. */
+  other: Exercise[];
+}
+
+/**
+ * Exercises that can stand in for this one today.
+ *
+ * Closest first: the same movement pattern. Then the rest of the muscle group, kept apart and
+ * labelled as such rather than presented as equivalent. Throughout, the same kind of work — a
+ * rep-counted lift is never swapped for a timed hold, because the next session's suggestion is
+ * built from reps and a 30-second plank has none. Within each group different equipment sorts
+ * first: the usual reason to swap is that the bar, the rack or the machine isn't free.
+ */
+export function swapCandidates(exercise: Exercise, library: Exercise[]): SwapOptions {
+  const timed = parseRepRange(exercise.reps) === null;
+  const equipment = exercise.equipment.toLowerCase();
+  const pattern = MOVEMENT_PATTERN[exercise.id];
+  const eligible = library.filter((e) => e.id !== exercise.id && (parseRepRange(e.reps) === null) === timed);
+  const order = (a: Exercise, b: Exercise) => {
+    const aSame = a.equipment.toLowerCase() === equipment ? 1 : 0;
+    const bSame = b.equipment.toLowerCase() === equipment ? 1 : 0;
+    return aSame - bSame || a.name.localeCompare(b.name);
+  };
+  const close = pattern ? eligible.filter((e) => MOVEMENT_PATTERN[e.id] === pattern).sort(order) : [];
+  const other = eligible.filter((e) => e.category === exercise.category && !close.includes(e)).sort(order);
+  return { close, other };
+}

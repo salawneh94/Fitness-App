@@ -1,10 +1,20 @@
-import { useState } from 'react';
-import { Clock, Minus, Pencil, Plus, PlayCircle, Trash2, X, Zap } from 'lucide-react-native';
+import { useMemo, useState } from 'react';
+import { Clock, Minus, Pencil, Plus, PlayCircle, Trash2, Trophy, X, Zap } from 'lucide-react-native';
 import { Modal, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import type { Exercise, ExerciseLogEntry, ScheduledWorkout, UnitSystem, Weekday, WorkoutLogEntry } from '@fittrack/shared';
-import { EXERCISE_LIBRARY, colors, computeRestDayInsight, displayWeight, toKgFromDisplay, todayISO, weightUnitLabel } from '@fittrack/shared';
+import {
+  EXERCISE_LIBRARY,
+  colors,
+  computeRestDayInsight,
+  displayWeight,
+  parseISODate,
+  recordsForLog,
+  toKgFromDisplay,
+  todayISO,
+  weightUnitLabel,
+} from '@fittrack/shared';
 import { randomUUID } from 'expo-crypto';
 import Card from '@/components/ui/card';
 import RestDayBanner from '@/components/rest-day-banner';
@@ -32,6 +42,17 @@ export default function WorkoutsScreen() {
   const [playingWorkout, setPlayingWorkout] = useState<ScheduledWorkout | null>(null);
 
   const workoutForDay = (day: Weekday) => scheduledWorkouts.find((w) => w.day === day);
+
+  // Newest first by the date trained, not by insertion: after a sync pull the array is in whatever
+  // order the server returned it, so "reverse" could put a month-old session on top.
+  const recentLogs = useMemo(
+    () =>
+      [...workoutLogs]
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, 10)
+        .map((log) => ({ log, records: recordsForLog(log, workoutLogs, profile.unitSystem) })),
+    [workoutLogs, profile.unitSystem]
+  );
   const restInsight = computeRestDayInsight(workoutLogs);
 
   function saveDayWorkout(day: Weekday, name: string, exerciseIds: string[]) {
@@ -106,24 +127,42 @@ export default function WorkoutsScreen() {
             </Text>
           ) : (
             <View>
-              {[...workoutLogs].reverse().slice(0, 10).map((log) => (
+              {recentLogs.map(({ log, records }) => (
                 <View
                   key={log.id}
                   className="flex-row items-center justify-between py-2.5 border-b"
                   style={{ borderColor: colors.gridline }}
                 >
                   <View className="flex-1 min-w-0">
-                    <Text className="text-sm font-medium" style={{ color: colors.textPrimary }}>
-                      {log.workoutName}
-                    </Text>
+                    <View className="flex-row items-center gap-1.5">
+                      <Text className="text-sm font-medium shrink" numberOfLines={1} style={{ color: colors.textPrimary }}>
+                        {log.workoutName}
+                      </Text>
+                      {records.length > 0 && (
+                        <View
+                          className="flex-row items-center gap-1 px-1.5 py-0.5 rounded-full"
+                          style={{ backgroundColor: 'rgba(251,191,36,0.14)' }}
+                          accessible
+                          accessibilityLabel={`${records.length} personal ${records.length === 1 ? 'best' : 'bests'}: ${records.map((r) => `${r.exerciseName}, ${r.headline}`).join('; ')}`}
+                        >
+                          <Trophy size={11} color={colors.brandLime} />
+                          <Text className="text-[10px] font-semibold" style={{ color: colors.brandLime }}>
+                            {records.length === 1 ? 'PB' : `${records.length} PBs`}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
                     <View className="flex-row items-center gap-1 mt-0.5">
                       <Clock size={12} color={colors.textMuted} />
                       <Text className="text-xs" style={{ color: colors.textMuted }}>
                         {log.durationMin} min ·{' '}
-                        {new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        {parseISODate(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                         {log.caloriesBurned ? ` · ${log.caloriesBurned} kcal` : ''}
                         {log.exerciseLogs && log.exerciseLogs.length > 0
-                          ? ` · ${log.exerciseLogs.reduce((s, e) => s + e.sets.length, 0)} sets logged`
+                          ? ` · ${(() => {
+                              const n = log.exerciseLogs.reduce((s, e) => s + e.sets.length, 0);
+                              return `${n} ${n === 1 ? 'set' : 'sets'} logged`;
+                            })()}`
                           : ''}
                       </Text>
                     </View>

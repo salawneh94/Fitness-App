@@ -68,6 +68,8 @@ export const EXERCISE_LIBRARY: Exercise[] = [
 
   // Core
   { id: 'plank', name: 'Plank', category: 'core', equipment: 'Bodyweight', videoUrl: demoSearchUrl('plank exercise'), videoId: 'mwlp75MS6Rg', sets: 3, reps: '30-60s' },
+  // No verified demo video yet — the modal falls back to the YouTube search link.
+  { id: 'side-plank', name: 'Side Plank', category: 'core', equipment: 'Bodyweight', videoUrl: demoSearchUrl('side plank'), sets: 3, reps: '20-40s/side' },
   { id: 'hanging-leg-raise', name: 'Hanging Leg Raise', category: 'core', equipment: 'Pull-up Bar', videoUrl: demoSearchUrl('hanging leg raise'), videoId: 'vwl68EF9M2Q', sets: 3, reps: '10-15' },
   { id: 'russian-twist', name: 'Russian Twist', category: 'core', equipment: 'Bodyweight/Plate', videoUrl: demoSearchUrl('russian twist'), videoId: 'fPxO-FA8acM', sets: 3, reps: '20 total' },
   { id: 'cable-crunch', name: 'Cable Crunch', category: 'core', equipment: 'Cable Machine', videoUrl: demoSearchUrl('cable crunch'), videoId: '809A_MuZ2PY', sets: 3, reps: '15-20' },
@@ -85,6 +87,8 @@ export const EXERCISE_LIBRARY: Exercise[] = [
   { id: 'burpee', name: 'Burpee', category: 'full_body', equipment: 'Bodyweight', videoUrl: demoSearchUrl('burpee'), videoId: 'G2hv_NYhM-A', sets: 3, reps: '10-15' },
   { id: 'kettlebell-swing', name: 'Kettlebell Swing', category: 'full_body', equipment: 'Kettlebell', videoUrl: demoSearchUrl('kettlebell swing'), videoId: '1Qi0NQW89Oc', sets: 3, reps: '15-20' },
   { id: 'mountain-climber', name: 'Mountain Climber', category: 'full_body', equipment: 'Bodyweight', videoUrl: demoSearchUrl('mountain climber exercise'), videoId: 'ZhiCSdOVJp0', sets: 3, reps: '20-30s' },
+  // No verified demo video yet — the modal falls back to the YouTube search link.
+  { id: 'jumping-jack', name: 'Jumping Jacks', category: 'full_body', equipment: 'Bodyweight', videoUrl: demoSearchUrl('jumping jacks'), sets: 3, reps: '30-45s' },
   { id: 'thruster', name: 'Dumbbell Thruster', category: 'full_body', equipment: 'Dumbbells', videoUrl: demoSearchUrl('dumbbell thruster'), videoId: 'He4-ttcwthg', sets: 3, reps: '10-12' },
 ];
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { deloadWeight, isDeloadActive, lastPerformance, suggestNextLoad, type Deload } from './progression';
+import { MOVEMENT_PATTERN, deloadWeight, isDeloadActive, lastPerformance, parseRepRange, suggestNextLoad, swapCandidates, type Deload } from './progression';
+import { EXERCISE_LIBRARY, findExercise } from './data/exercises';
 import type { SetEntry, WorkoutLogEntry } from './types';
 
 function workout(date: string, exerciseId: string, sets: SetEntry[]): WorkoutLogEntry {
@@ -79,5 +80,47 @@ describe('isDeloadActive', () => {
 
   it('is inactive for a lift with no history', () => {
     expect(isDeloadActive({ ...deload, exerciseId: 'squat' }, stalled)).toBe(false);
+  });
+});
+
+describe('swapCandidates', () => {
+  const lib = EXERCISE_LIBRARY;
+  const ids = (xs: { id: string }[]) => xs.map((x) => x.id);
+
+  it('offers true substitutes first: squats for a squat, not calf raises', () => {
+    const { close, other } = swapCandidates(findExercise('squat')!, lib);
+    expect(ids(close).sort()).toEqual(['front-squat', 'goblet-squat', 'leg-press']);
+    // The rest of "legs" is still offered — but separately, not as an equivalent.
+    expect(ids(other)).toEqual(expect.arrayContaining(['leg-curl', 'calf-raise']));
+    expect(ids(close)).not.toContain('calf-raise');
+  });
+
+  it('crosses the library’s categories where the movement does', () => {
+    // Deadlift is filed under back, RDL and sumo under glutes; all three are hinges.
+    expect(ids(swapCandidates(findExercise('deadlift')!, lib).close)).toEqual(expect.arrayContaining(['rdl', 'sumo-deadlift', 'rack-pull']));
+  });
+
+  it('lists different equipment first within each group', () => {
+    const { close } = swapCandidates(findExercise('bench-press')!, lib);
+    const firstBarbell = close.findIndex((e) => e.equipment === 'Barbell');
+    expect(firstBarbell).toBeGreaterThan(0);
+    expect(close.slice(firstBarbell).every((e) => e.equipment === 'Barbell')).toBe(true);
+  });
+
+  it('never trades a rep-counted lift for a timed hold, or the reverse', () => {
+    for (const ex of lib) {
+      const timed = parseRepRange(ex.reps) === null;
+      const { close, other } = swapCandidates(ex, lib);
+      for (const alt of [...close, ...other]) expect(parseRepRange(alt.reps) === null).toBe(timed);
+    }
+  });
+
+  it('every library exercise has a movement pattern and at least one alternative', () => {
+    expect(lib.filter((e) => !MOVEMENT_PATTERN[e.id]).map((e) => e.id)).toEqual([]);
+    const stranded = lib.filter((e) => {
+      const { close, other } = swapCandidates(e, lib);
+      return close.length + other.length === 0;
+    });
+    expect(stranded.map((e) => e.id)).toEqual([]);
   });
 });
