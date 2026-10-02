@@ -414,30 +414,54 @@ export async function pullRemote(userId: string, { full = false }: { full?: bool
 
   const current = useAppStore.getState();
   const hasPendingProfile = pendingKeysForTable('profiles').has(userId);
-  // On a delta pull an absent profile means "unchanged", not "no profile" — only a full pull can
-  // conclude the latter.
-  const keepLocalProfile = hasPendingProfile || (!profileRes.data && !full);
+  // On a delta pull an absent profile means "unchanged", not "no profile" — only a *successful*
+  // full pull can conclude the latter. A failed one concludes nothing: postgrest resolves a
+  // network failure as `{ data: null, error }` rather than throwing, which is indistinguishable
+  // from "no row" unless the error is checked.
+  const keepLocalProfile = hasPendingProfile || Boolean(profileRes.error) || (!profileRes.data && !full);
   const merge = watermark ? applyDelta : mergeCollection;
+
+  /**
+   * A failed query leaves that collection exactly as it is locally.
+   *
+   * Without this, every cold start with no connection was a data wipe: the full pull treats the
+   * response as the server's complete set, an errored response reads as an empty one, and
+   * mergeCollection duly dropped every row that wasn't still pending — then the null profile sent
+   * the user back through onboarding, whose new profile would overwrite the real one on the server
+   * the moment the connection came back. Each table is judged on its own response, so one failing
+   * query (say, a table whose migration hasn't been applied yet) can't take the others down with it.
+   */
+  function apply<Row, T>(
+    table: SyncTable,
+    res: { data: Row[] | null; error: unknown },
+    keyOf: (item: T) => string,
+    fromRow: (row: Row) => T,
+    local: T[]
+  ): T[] {
+    if (res.error) return local;
+    return merge(table, keyOf, (res.data ?? []).map(fromRow), local);
+  }
 
   useAppStore.setState({
     profile: keepLocalProfile ? current.profile : profileRes.data ? profileFromRow(profileRes.data) : null,
-    weightHistory: merge('weight_entries', (e) => e.date, (weightRes.data ?? []).map((r) => ({ date: r.date, weightKg: Number(r.weight_kg) })), current.weightHistory),
-    stepsHistory: merge('steps_entries', (e) => e.date, (stepsRes.data ?? []).map((r) => ({ date: r.date, steps: r.steps })), current.stepsHistory),
-    sleepHistory: merge('sleep_entries', (e) => e.date, (sleepRes.data ?? []).map((r) => ({ date: r.date, hours: Number(r.hours) })), current.sleepHistory),
-    measurementsHistory: merge(
-      'body_measurements',
-      (e) => e.date,
-      (measurementsRes.data ?? []).map(measurementFromRow),
-      current.measurementsHistory
-    ),
-    foodEntries: merge('food_entries', (e) => e.id, (foodRes.data ?? []).map(foodEntryFromRow), current.foodEntries),
-    savedMeals: merge('saved_meals', (e) => e.id, (savedMealsRes.data ?? []).map(savedMealFromRow), current.savedMeals),
-    scheduledWorkouts: merge('scheduled_workouts', (e) => e.day, (scheduledRes.data ?? []).map(scheduledWorkoutFromRow), current.scheduledWorkouts),
-    workoutLogs: merge('workout_logs', (e) => e.id, (workoutLogsRes.data ?? []).map(workoutLogFromRow), current.workoutLogs),
-    progressPhotos: merge('progress_photos', (e) => e.id, (photosRes.data ?? []).map(progressPhotoFromRow), current.progressPhotos),
+    weightHistory: apply('weight_entries', weightRes, (e) => e.date, (r) => ({ date: r.date, weightKg: Number(r.weight_kg) }), current.weightHistory),
+    stepsHistory: apply('steps_entries', stepsRes, (e) => e.date, (r) => ({ date: r.date, steps: r.steps }), current.stepsHistory),
+    sleepHistory: apply('sleep_entries', sleepRes, (e) => e.date, (r) => ({ date: r.date, hours: Number(r.hours) }), current.sleepHistory),
+    measurementsHistory: apply('body_measurements', measurementsRes, (e) => e.date, measurementFromRow, current.measurementsHistory),
+    foodEntries: apply('food_entries', foodRes, (e) => e.id, foodEntryFromRow, current.foodEntries),
+    savedMeals: apply('saved_meals', savedMealsRes, (e) => e.id, savedMealFromRow, current.savedMeals),
+    scheduledWorkouts: apply('scheduled_workouts', scheduledRes, (e) => e.day, scheduledWorkoutFromRow, current.scheduledWorkouts),
+    workoutLogs: apply('workout_logs', workoutLogsRes, (e) => e.id, workoutLogFromRow, current.workoutLogs),
+    progressPhotos: apply('progress_photos', photosRes, (e) => e.id, progressPhotoFromRow, current.progressPhotos),
   });
 
-  const nextWatermark = maxUpdatedAt(
+  const responses = [profileRes, weightRes, stepsRes, sleepRes, measurementsRes, foodRes, savedMealsRes, scheduledRes, workoutLogsRes, photosRes];
+  // The watermark is one value shared by every table, so it may only advance when every table
+  // answered. Advancing it past rows a failed table never delivered would make the next delta
+  // pull skip them — permanently, until some later full pull happened to catch them.
+  const allAnswered = !responses.some((r) => r.error);
+
+  const nextWatermark = allAnswered && maxUpdatedAt(
     [
       profileRes.data ? [profileRes.data] : [],
       weightRes.data ?? [],
