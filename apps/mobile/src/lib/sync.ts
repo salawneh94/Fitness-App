@@ -65,6 +65,8 @@ function profileToRow(userId: string, p: Profile) {
     preferred_days_per_week: p.preferredDaysPerWeek,
     unit_system: p.unitSystem,
     created_at: p.createdAt,
+    plan_template_id: p.activePlan?.templateId ?? null,
+    plan_started_on: p.activePlan?.startedOn ?? null,
   };
 }
 
@@ -83,6 +85,10 @@ function profileFromRow(row: Record<string, any>): Profile {
     preferredDaysPerWeek: row.preferred_days_per_week,
     unitSystem: row.unit_system,
     createdAt: row.created_at,
+    activePlan:
+      row.plan_template_id && row.plan_started_on
+        ? { templateId: row.plan_template_id, startedOn: row.plan_started_on }
+        : undefined,
   };
 }
 

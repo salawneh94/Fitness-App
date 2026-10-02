@@ -11,7 +11,6 @@ import HeightInput from './ui/height-input';
 import UnitToggle from './ui/unit-toggle';
 import TextField from './ui/text-field';
 import PressableScale from '@/components/ui/pressable-scale';
-import { buildScheduledWorkouts } from '@/lib/apply-plan';
 
 const GOALS: Goal[] = ['lose_fat', 'build_muscle', 'maintain', 'improve_endurance', 'general_health'];
 const ACTIVITIES: ActivityLevel[] = ['sedentary', 'light', 'moderate', 'active', 'very_active'];
@@ -34,7 +33,7 @@ interface WizardForm {
 
 export default function OnboardingWizard() {
   const setProfile = useAppStore((s) => s.setProfile);
-  const setScheduledWorkouts = useAppStore((s) => s.setScheduledWorkouts);
+  const applyPlan = useAppStore((s) => s.applyPlan);
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<WizardForm>({
     name: '',
@@ -64,7 +63,7 @@ export default function OnboardingWizard() {
     // user re-running onboarding shouldn't have their own plan overwritten.
     if (useAppStore.getState().scheduledWorkouts.length === 0) {
       const recommendation = recommendPlan(profile);
-      if (recommendation) setScheduledWorkouts(buildScheduledWorkouts(recommendation.template));
+      if (recommendation) applyPlan(recommendation.template);
     }
   }
 

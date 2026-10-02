@@ -20,6 +20,8 @@ export interface Profile {
   preferredDaysPerWeek: number;
   unitSystem: UnitSystem;
   createdAt: string;
+  /** The plan template being followed and when it started — what makes "week 3" possible. */
+  activePlan?: { templateId: string; startedOn: string };
 }
 
 export interface WeightEntry {

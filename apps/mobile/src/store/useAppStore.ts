@@ -21,9 +21,11 @@ import {
   type WaterEntry,
   type WeightEntry,
   type WorkoutLogEntry,
+  type WorkoutPlanTemplate,
 } from '@fittrack/shared';
 import { useAuthStore } from './useAuthStore';
 import { push } from '@/lib/sync';
+import { buildScheduledWorkouts } from '@/lib/apply-plan';
 
 function upsertByDate<T extends { date: string }>(history: T[], entry: T): T[] {
   const idx = history.findIndex((h) => h.date === entry.date);
@@ -70,6 +72,8 @@ interface AppState {
   removeFoodEntry: (id: string) => void;
 
   setScheduledWorkouts: (workouts: ScheduledWorkout[]) => void;
+  /** Lay a plan template out as this week's schedule and start counting its weeks from today. */
+  applyPlan: (template: WorkoutPlanTemplate) => void;
   addWorkoutLog: (entry: Omit<WorkoutLogEntry, 'id'>) => void;
   /** Correct a session after the fact — a mistyped weight shouldn't mean re-entering the lot. */
   updateWorkoutLog: (id: string, patch: Partial<Omit<WorkoutLogEntry, 'id'>>) => void;
@@ -240,6 +244,18 @@ export const useAppStore = create<AppState>()(
             else push.deleteScheduledWorkoutDay(day);
           }
         }
+      },
+
+      applyPlan: (template) => {
+        // The schedule and the record of which plan it came from change together, so the Plans
+        // tab can never show a week number for a plan that isn't the one laid out.
+        get().setScheduledWorkouts(buildScheduledWorkouts(template));
+        const profile = get().profile;
+        if (!profile) return;
+        const next = { ...profile, activePlan: { templateId: template.id, startedOn: todayISO() } };
+        set({ profile: next });
+        const userId = currentUserId();
+        if (userId) push.profile(userId, next);
       },
 
       addWorkoutLog: (entry) => {
