@@ -99,3 +99,29 @@ describe('withoutSnoozed', () => {
     for (const i of list) expect(i.key).toBeTruthy();
   });
 });
+
+describe('plan_complete', () => {
+  // Upper/Lower: 10 weeks × 4 days. Started 2026-06-29 → week 11 on 2026-09-11.
+  const onPlan = { ...profile, activePlan: { templateId: 'upper-lower', startedOn: '2026-06-29' } };
+  const sessions = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ id: `p${i}`, date: addDaysISO('2026-06-29', i * 2), workoutName: 'Upper', durationMin: 50 }));
+
+  it('fires after the last week when the block was actually trained', () => {
+    const insight = find(run({ profile: onPlan, workoutLogs: sessions(30) }), 'plan_complete')!;
+    expect(insight.title).toBe("You've finished 10 weeks of Upper / Lower Split");
+    expect(insight.detail).toContain('30 sessions');
+    expect(insight.action).toEqual({ kind: 'browse_plans', label: 'Choose what’s next' });
+    expect(insight.key).toBe('plan_complete:upper-lower:2026-06-29');
+  });
+
+  it('stays quiet when the weeks went by but the training didn’t', () => {
+    // 19 of 40 planned sessions — under half.
+    expect(find(run({ profile: onPlan, workoutLogs: sessions(19) }), 'plan_complete')).toBeUndefined();
+  });
+
+  it('stays quiet during the block and without a plan', () => {
+    const recent = { ...profile, activePlan: { templateId: 'upper-lower', startedOn: '2026-08-31' } };
+    expect(find(run({ profile: recent, workoutLogs: sessions(30) }), 'plan_complete')).toBeUndefined();
+    expect(find(run({ workoutLogs: sessions(30) }), 'plan_complete')).toBeUndefined();
+  });
+});

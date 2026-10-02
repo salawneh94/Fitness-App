@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
 import { AlertTriangle, CalendarCheck, Lightbulb, Text as TextIcon, Trophy } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 import {
@@ -45,6 +46,7 @@ function InsightRow({
   onProteinFoods: () => void;
 }) {
   const { icon: Icon, color, tint } = TONE[insight.tone];
+  const router = useRouter();
   const deloads = useAppStore((s) => s.deloads);
   const workoutLogs = useAppStore((s) => s.workoutLogs);
   const startDeload = useAppStore((s) => s.startDeload);
@@ -91,8 +93,10 @@ function InsightRow({
                   onPress={() => {
                     if (action.kind === 'deload') {
                       startDeload({ exerciseId: action.exerciseId, stalledKg: action.stalledKg, deloadKg: action.deloadKg });
-                    } else {
+                    } else if (action.kind === 'protein_foods') {
                       onProteinFoods();
+                    } else {
+                      router.push('/plans');
                     }
                   }}
                   className="px-3.5 py-2 rounded-full"

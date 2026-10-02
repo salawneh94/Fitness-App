@@ -32,7 +32,7 @@ export function planWeekNumber(startedOn: string, today: string): number {
   return Math.max(1, Math.round((b - a) / (7 * 86_400_000)) + 1);
 }
 
-export type DayStatus = 'done' | 'missed' | 'today' | 'upcoming' | 'rest';
+export type DayStatus = 'done' | 'made_up' | 'missed' | 'today' | 'upcoming' | 'rest';
 
 export interface WeekDay {
   day: Weekday;
@@ -40,46 +40,90 @@ export interface WeekDay {
   /** What's scheduled, if anything. */
   workoutName?: string;
   status: DayStatus;
-  /** A session was logged on a day nothing was scheduled. Counted, never penalised. */
+  /** For a made-up session: the date it was actually done. */
+  madeUpOn?: string;
+  /** A session was logged on this day beyond what was scheduled for it. Counted, never penalised. */
   extra: boolean;
 }
 
 export interface WeekOverview {
   days: WeekDay[];
-  /** Sessions scheduled this week, and how many of those days have a session logged. */
+  /** Sessions scheduled this week, and how many of them happened (on the day, or made up later). */
   planned: number;
   done: number;
-  /** Sessions logged on unscheduled days. */
+  /** Sessions logged that weren't any scheduled session. */
   extras: number;
   /** The next scheduled session not yet done — today's, if it's still to do. */
   next: { day: Weekday; date: string; workoutName: string } | null;
+  /** Missed this week and not made up yet, oldest first. */
+  missed: { day: Weekday; date: string; workoutName: string }[];
 }
 
 /**
  * This calendar week of the schedule, day by day, against what was actually logged.
  *
- * A day counts as done if any session was logged on it. Matching the session to the scheduled
- * workout by name would be stricter and worse: someone who swaps Thursday's legs for an upper
- * session because their knee hurts *trained*, and calling that a miss would be both wrong and
- * the fastest way to make them stop logging honestly.
+ * A scheduled day counts as done if any session was logged on it. Matching the session to the
+ * scheduled workout by name would be stricter and worse: someone who swaps Thursday's legs for an
+ * upper session because their knee hurts *trained*, and calling that a miss would be both wrong
+ * and the fastest way to make them stop logging honestly.
+ *
+ * A missed day is made up by a later session this week with its name — which is what logging it
+ * from "Make it up today" produces. Each logged session counts once: it completes its own day,
+ * or makes up one missed day, or is an extra.
  */
 export function weekOverview(schedule: ScheduledWorkout[], logs: WorkoutLogEntry[], today: string): WeekOverview {
   const monday = mondayOf(today);
+  const sunday = addDaysISO(monday, 6);
   const byDay = new Map(schedule.map((w) => [w.day, w]));
-  const loggedDates = new Set(logs.map((l) => l.date));
+
+  // This week's sessions, oldest first; each is consumed at most once below.
+  const pool = logs
+    .filter((l) => l.date >= monday && l.date <= sunday)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((l) => ({ date: l.date, name: l.workoutName, used: false }));
 
   const days: WeekDay[] = WEEKDAYS.map((day, i) => {
     const date = addDaysISO(monday, i);
     const scheduled = byDay.get(day);
-    const logged = loggedDates.has(date);
-    let status: DayStatus;
-    if (logged) status = 'done';
-    else if (!scheduled) status = 'rest';
-    else if (date < today) status = 'missed';
-    else if (date === today) status = 'today';
-    else status = 'upcoming';
-    return { day, date, workoutName: scheduled?.name, status, extra: logged && !scheduled };
+    return { day, date, workoutName: scheduled?.name, status: scheduled ? 'upcoming' : 'rest', extra: false };
   });
+
+  // 1. Every scheduled day claims a session from its own date — its own workout if it was logged
+  //    that day, otherwise whatever was.
+  for (const d of days) {
+    if (!d.workoutName) continue;
+    const own = pool.find((l) => !l.used && l.date === d.date && l.name === d.workoutName)
+      ?? pool.find((l) => !l.used && l.date === d.date);
+    if (own) {
+      own.used = true;
+      d.status = 'done';
+    }
+  }
+
+  // 2. Past scheduled days with nothing logged: made up later this week, or missed.
+  for (const d of days) {
+    if (!d.workoutName || d.status === 'done') continue;
+    if (d.date < today) {
+      const makeUp = pool.find((l) => !l.used && l.date > d.date && l.name === d.workoutName);
+      if (makeUp) {
+        makeUp.used = true;
+        d.status = 'made_up';
+        d.madeUpOn = makeUp.date;
+      } else {
+        d.status = 'missed';
+      }
+    } else if (d.date === today) {
+      d.status = 'today';
+    }
+  }
+
+  // 3. Whatever's left is extra — shown on the day it happened.
+  for (const l of pool) {
+    if (l.used) continue;
+    const d = days.find((x) => x.date === l.date)!;
+    d.extra = true;
+    if (!d.workoutName) d.status = 'done';
+  }
 
   const scheduledDays = days.filter((d) => d.workoutName !== undefined);
   let next: WeekOverview['next'] = null;
@@ -95,10 +139,29 @@ export function weekOverview(schedule: ScheduledWorkout[], logs: WorkoutLogEntry
   return {
     days,
     planned: scheduledDays.length,
-    done: scheduledDays.filter((d) => d.status === 'done').length,
-    extras: days.filter((d) => d.extra).length,
+    done: scheduledDays.filter((d) => d.status === 'done' || d.status === 'made_up').length,
+    extras: pool.filter((l) => !l.used).length,
     next,
+    missed: scheduledDays
+      .filter((d) => d.status === 'missed')
+      .map((d) => ({ day: d.day, date: d.date, workoutName: d.workoutName! })),
   };
+}
+
+/**
+ * Can a missed session be made up today without doubling up? Only on a free day: nothing
+ * scheduled, nothing trained yet. A day whose own session is still to do — or already done —
+ * would end up with two, and piling sessions into one day is how people get hurt.
+ */
+export function canMakeUpToday(week: WeekOverview, today: string): boolean {
+  const d = week.days.find((x) => x.date === today);
+  return !!d && d.workoutName === undefined && !d.extra;
+}
+
+/** Block progress: "week 3 of 10", and whether the block is over. */
+export function planBlock(template: WorkoutPlanTemplate, startedOn: string, today: string): { week: number; of: number; complete: boolean } {
+  const week = planWeekNumber(startedOn, today);
+  return { week, of: template.weeks, complete: week > template.weeks };
 }
 
 /**

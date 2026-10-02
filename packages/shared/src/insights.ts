@@ -4,6 +4,8 @@ import { daysBetween, slopePerDay } from './trend';
 import { deloadWeight } from './progression';
 import { findExercise } from './data/exercises';
 import { displayWeight, weightUnitLabel } from './units';
+import { PLAN_TEMPLATES } from './data/planTemplates';
+import { planBlock } from './planProgress';
 
 /** Matches the adaptive-TDEE window, so the two features never describe different periods. */
 export const INSIGHT_WINDOW_DAYS = 28;
@@ -30,6 +32,8 @@ const MAX_SAFE_LOSS_RATE = 0.01;
 const STALL_KG_PER_WEEK = 0.1;
 /** Adherence worth congratulating. */
 const STRONG_ADHERENCE = 0.8;
+/** Share of a block's sessions that must actually have been trained to call the block finished. */
+const MIN_BLOCK_ADHERENCE = 0.5;
 
 export type InsightTone = 'warning' | 'suggestion' | 'win';
 
@@ -39,6 +43,7 @@ export type InsightId =
   | 'weight_stalled'
   | 'lift_stalled'
   | 'sleep_short'
+  | 'plan_complete'
   | 'lift_progressing'
   | 'strong_consistency';
 
@@ -50,7 +55,8 @@ export type InsightId =
  */
 export type InsightAction =
   | { kind: 'deload'; label: string; exerciseId: string; stalledKg: number; deloadKg: number }
-  | { kind: 'protein_foods'; label: string };
+  | { kind: 'protein_foods'; label: string }
+  | { kind: 'browse_plans'; label: string };
 
 export interface Insight {
   id: InsightId;
@@ -294,6 +300,27 @@ export function deriveInsights(input: InsightInput): Insight[] {
         title: 'Short sleep is working against your training',
         detail: `Averaging ${mean.toFixed(1)} hours across ${plural(nights.length, 'night')}. Recovery is when training turns into progress, and under-sleeping blunts both strength gains and appetite control.`,
         priority: 4,
+      });
+    }
+  }
+
+  // --- A finished block. ---
+  // Only when the weeks were actually trained: someone who applied a plan ten weeks ago and
+  // logged four sessions hasn't finished anything, and telling them they have would be flattery
+  // the data doesn't support.
+  const template = profile.activePlan ? PLAN_TEMPLATES.find((t) => t.id === profile.activePlan!.templateId) : undefined;
+  if (profile.activePlan && template) {
+    const block = planBlock(template, profile.activePlan.startedOn, today);
+    const sessions = workoutLogs.filter((w) => w.date >= profile.activePlan!.startedOn && w.date <= today).length;
+    if (block.complete && sessions >= template.weeks * template.daysPerWeek * MIN_BLOCK_ADHERENCE) {
+      insights.push({
+        id: 'plan_complete',
+        key: `plan_complete:${template.id}:${profile.activePlan.startedOn}`,
+        tone: 'suggestion',
+        title: `You've finished ${template.weeks} weeks of ${template.name}`,
+        detail: `${plural(sessions, 'session')} since you started it. Programs like this are built to run about ${template.weeks} weeks — after that, switching the split, or restarting it from week 1 with heavier starting weights, keeps training from going stale.`,
+        priority: 5,
+        action: { kind: 'browse_plans', label: 'Choose what’s next' },
       });
     }
   }

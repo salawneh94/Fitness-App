@@ -149,6 +149,11 @@ export interface WorkoutPlanTemplate {
   split: string; // e.g. "Upper/Lower", "Push/Pull/Legs"
   description: string;
   daysPerWeek: number;
+  /**
+   * How long the program is meant to run before changing it up. Most structured programs are
+   * written as 8–12 week blocks; past that, the same stimulus stops producing much.
+   */
+  weeks: number;
   goals: Goal[]; // which profile goals this split suits best
   days: { label: string; focus: string; exercises: Exercise[] }[];
 }

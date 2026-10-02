@@ -1,18 +1,19 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { CalendarCheck, Check, ChevronRight, Dumbbell, PlayCircle, Sparkles } from 'lucide-react-native';
+import { CalendarCheck, Check, ChevronRight, Dumbbell, PlayCircle, Redo2, Sparkles } from 'lucide-react-native';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
-import type { Exercise, UnitSystem, WeekDay } from '@fittrack/shared';
+import type { Exercise, ScheduledWorkout, UnitSystem, WeekDay } from '@fittrack/shared';
 import {
   PLAN_TEMPLATES,
+  canMakeUpToday,
   colors,
   displayWeight,
   findExercise,
   isCustomised,
   isDeloadActive,
-  planWeekNumber,
+  planBlock,
   recommendPlan,
   todayISO,
   weekOverview,
@@ -20,12 +21,17 @@ import {
 } from '@fittrack/shared';
 import Card from '@/components/ui/card';
 import ExerciseVideoModal from '@/components/exercise-video-modal';
+import GuidedWorkoutPlayer from '@/components/guided-workout-player';
 import PressableScale from '@/components/ui/pressable-scale';
 
 const fmtLoad = (kg: number, unit: UnitSystem) => `${Math.round(displayWeight(kg, unit) * 10) / 10} ${weightUnitLabel(unit)}`;
 
+/** "Thursday" for a calendar date — noon, so no timezone can tip it into the neighbouring day. */
+const weekdayName = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long' });
+
 const STATUS_LABEL: Record<WeekDay['status'], string> = {
   done: 'done',
+  made_up: 'made up',
   missed: 'missed',
   today: 'today',
   upcoming: 'coming up',
@@ -37,7 +43,9 @@ function DayCell({ d }: { d: WeekDay }) {
   const style =
     d.status === 'done'
       ? { bg: 'rgba(34,197,94,0.16)', border: 'transparent', fg: colors.statusGood }
-      : d.status === 'today'
+      : d.status === 'made_up'
+        ? { bg: 'transparent', border: 'rgba(34,197,94,0.55)', fg: colors.statusGood }
+        : d.status === 'today'
         ? { bg: 'rgba(34,211,238,0.10)', border: colors.brandPrimary, fg: colors.brandPrimary }
         : d.status === 'missed'
           ? { bg: 'transparent', border: 'rgba(239,68,68,0.45)', fg: colors.statusCritical }
@@ -48,7 +56,7 @@ function DayCell({ d }: { d: WeekDay }) {
     <View
       className="flex-1 items-center gap-1.5"
       accessible
-      accessibilityLabel={`${d.day}: ${d.workoutName ?? 'rest'}, ${STATUS_LABEL[d.status]}${d.extra ? ' (extra session)' : ''}`}
+      accessibilityLabel={`${d.day}: ${d.workoutName ?? 'rest'}, ${STATUS_LABEL[d.status]}${d.madeUpOn ? ` on ${weekdayName(d.madeUpOn)}` : ''}${d.extra ? ' (extra session)' : ''}`}
     >
       <Text className="text-[11px] font-medium" style={{ color: d.status === 'today' ? colors.brandPrimary : colors.textMuted }}>
         {d.day.slice(0, 1)}
@@ -59,6 +67,8 @@ function DayCell({ d }: { d: WeekDay }) {
       >
         {d.status === 'done' ? (
           <Check size={16} color={style.fg} />
+        ) : d.status === 'made_up' ? (
+          <Redo2 size={15} color={style.fg} />
         ) : scheduled ? (
           <View className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: style.fg }} />
         ) : (
@@ -83,10 +93,17 @@ function YourPlanCard() {
   const workoutLogs = useAppStore((s) => s.workoutLogs);
   const today = todayISO();
 
+  const addWorkoutLog = useAppStore((s) => s.addWorkoutLog);
+  const [playing, setPlaying] = useState<ScheduledWorkout | null>(null);
+
   const template = profile.activePlan ? PLAN_TEMPLATES.find((t) => t.id === profile.activePlan!.templateId) : undefined;
   const week = useMemo(() => weekOverview(schedule, workoutLogs, today), [schedule, workoutLogs, today]);
-  const weekNumber = profile.activePlan && template ? planWeekNumber(profile.activePlan.startedOn, today) : null;
+  const block = profile.activePlan && template ? planBlock(template, profile.activePlan.startedOn, today) : null;
   const customised = template ? isCustomised(template, schedule) : false;
+  const freeToday = canMakeUpToday(week, today);
+  const todays = week.days.find((d) => d.date === today);
+  // The first day after today with nothing scheduled and nothing done — somewhere a miss can go.
+  const nextFree = week.days.find((d) => d.date > today && d.workoutName === undefined && !d.extra);
 
   const nextWhen = week.next
     ? week.next.date === today
@@ -111,14 +128,35 @@ function YourPlanCard() {
             {week.planned} sessions a week
           </Text>
         </View>
-        {weekNumber !== null && (
-          <View className="px-2.5 py-1 rounded-full" style={{ backgroundColor: 'rgba(34,211,238,0.12)' }}>
-            <Text className="text-xs font-semibold" style={{ color: colors.brandPrimary }}>
-              Week {weekNumber}
+        {block && (
+          <View
+            className="px-2.5 py-1 rounded-full"
+            style={{ backgroundColor: block.complete ? 'rgba(34,197,94,0.14)' : 'rgba(34,211,238,0.12)' }}
+          >
+            <Text className="text-xs font-semibold" style={{ color: block.complete ? colors.statusGood : colors.brandPrimary }}>
+              {block.complete ? 'Block complete' : `Week ${block.week} of ${block.of}`}
             </Text>
           </View>
         )}
       </View>
+
+      {block && !block.complete && (
+        <View
+          className="h-1 rounded-full overflow-hidden mt-3"
+          style={{ backgroundColor: colors.gridline }}
+          accessibilityRole="progressbar"
+          accessibilityLabel="Plan progress"
+          accessibilityValue={{ min: 0, max: block.of, now: block.week }}
+        >
+          <View className="h-full rounded-full" style={{ width: `${(block.week / block.of) * 100}%`, backgroundColor: colors.brandPrimary }} />
+        </View>
+      )}
+      {block?.complete && (
+        <Text className="text-xs mt-2" style={{ color: colors.textSecondary }}>
+          You're past the {block.of} weeks this plan is built for. Pick what's next below — a new split, or this
+          one again from week 1.
+        </Text>
+      )}
 
       <View className="flex-row mt-4 mb-4">
         {week.days.map((d) => (
@@ -133,6 +171,55 @@ function YourPlanCard() {
         sessions done this week
         {week.extras > 0 ? ` · ${week.extras} extra` : ''}
       </Text>
+
+      {/* A missed session used to be a red dot and nothing more. Life moves sessions around; the
+          useful thing is to fit it into a free day rather than write the week off. */}
+      {freeToday
+        ? // Today is free: each miss gets its own one-tap make-up.
+          week.missed.map((m) => {
+            const workout = schedule.find((w) => w.day === m.day);
+            return (
+              <View key={m.date} className="mt-3 p-3 rounded-2xl border" style={{ borderColor: 'rgba(239,68,68,0.3)' }}>
+                <Text className="text-xs" style={{ color: colors.textMuted }}>
+                  Missed {weekdayName(m.date)}
+                </Text>
+                <Text numberOfLines={1} className="text-sm font-medium mt-0.5" style={{ color: colors.textPrimary }}>
+                  {m.workoutName}
+                </Text>
+                {workout && (
+                  <PressableScale
+                    hapticStyle="success"
+                    accessibilityRole="button"
+                    accessibilityLabel={`Make up ${m.workoutName} today`}
+                    onPress={() => setPlaying(workout)}
+                    className="self-start mt-2.5 px-3.5 py-2 rounded-full"
+                    style={{ backgroundColor: colors.brandPrimaryDark }}
+                  >
+                    <Text className="text-xs font-semibold text-white">Make it up today</Text>
+                  </PressableScale>
+                )}
+              </View>
+            );
+          })
+        : // Not today: one box, and the actual day that's free rather than "your next free day".
+          week.missed.length > 0 && (
+            <View className="mt-3 p-3 rounded-2xl border" style={{ borderColor: 'rgba(239,68,68,0.3)' }}>
+              <Text className="text-xs mb-1" style={{ color: colors.textMuted }}>
+                Missed this week
+              </Text>
+              {week.missed.map((m) => (
+                <Text key={m.date} numberOfLines={1} className="text-sm font-medium" style={{ color: colors.textPrimary }}>
+                  {weekdayName(m.date)} · {m.workoutName}
+                </Text>
+              ))}
+              <Text className="text-xs mt-1.5" style={{ color: colors.textMuted }}>
+                {todays?.workoutName ? `Today has ${todays.workoutName}` : "You've already trained today"}
+                {nextFree
+                  ? ` — ${weekdayName(nextFree.date)} is free to make one up.`
+                  : ' — no free day left this week, so pick up with next week’s plan.'}
+              </Text>
+            </View>
+          )}
 
       {week.next && (
         <PressableScale
@@ -153,6 +240,19 @@ function YourPlanCard() {
           </View>
           <ChevronRight size={18} color={colors.textMuted} />
         </PressableScale>
+      )}
+
+      {playing && (
+        <GuidedWorkoutPlayer
+          workout={playing}
+          unit={profile.unitSystem}
+          onCancel={() => setPlaying(null)}
+          onFinish={(durationMin, exerciseLogs, caloriesBurned, notes) => {
+            // Logged under the missed session's name: that's what marks the missed day made up.
+            addWorkoutLog({ date: today, workoutName: playing.name, durationMin, caloriesBurned, notes, exerciseLogs });
+            setPlaying(null);
+          }}
+        />
       )}
     </Card>
   );
