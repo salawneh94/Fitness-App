@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, Linking, Platform, Switch, Text, View } from 'react-native';
-import { Bell } from 'lucide-react-native';
+import { Bell, CalendarDays } from 'lucide-react-native';
 import { colors } from '@fittrack/shared';
 import { useReminderStore } from '@/store/useReminderStore';
 import Card from './ui/card';
@@ -19,14 +19,16 @@ export default function ReminderCard() {
   const minute = useReminderStore((s) => s.minute);
   const setEnabled = useReminderStore((s) => s.setEnabled);
   const setTime = useReminderStore((s) => s.setTime);
+  const weeklyRecap = useReminderStore((s) => s.weeklyRecap);
+  const setWeeklyRecap = useReminderStore((s) => s.setWeeklyRecap);
   const [busy, setBusy] = useState(false);
 
   if (Platform.OS === 'web') return null; // no local notifications in a browser tab
 
-  async function toggle(next: boolean) {
+  async function toggle(next: boolean, which: 'daily' | 'recap' = 'daily') {
     setBusy(true);
     try {
-      const result = await setEnabled(next);
+      const result = which === 'daily' ? await setEnabled(next) : await setWeeklyRecap(next);
       // Asking and being refused is the one case worth explaining — the switch springing back
       // with no reason looks like a bug rather than an OS decision.
       if (next && !result) {
@@ -45,7 +47,7 @@ export default function ReminderCard() {
   }
 
   return (
-    <Card title="Daily reminder">
+    <Card title="Notifications">
       <View className="flex-row items-start gap-3">
         <Bell size={18} color={enabled ? colors.brandPrimary : colors.textMuted} style={{ marginTop: 2 }} />
         <View className="flex-1">
@@ -91,6 +93,27 @@ export default function ReminderCard() {
               })}
             </View>
           )}
+        </View>
+      </View>
+
+      <View className="flex-row items-start gap-3 mt-4 pt-4 border-t" style={{ borderColor: colors.gridline }}>
+        <CalendarDays size={18} color={weeklyRecap ? colors.brandPrimary : colors.textMuted} style={{ marginTop: 2 }} />
+        <View className="flex-1">
+          <View className="flex-row items-center justify-between gap-3">
+            <Text className="text-sm font-medium flex-1" style={{ color: colors.textPrimary }}>
+              Weekly recap
+            </Text>
+            <Switch
+              value={weeklyRecap}
+              onValueChange={(v) => void toggle(v, 'recap')}
+              disabled={busy}
+              accessibilityLabel="Weekly recap"
+              trackColor={{ false: colors.gridline, true: colors.brandPrimaryDark }}
+            />
+          </View>
+          <Text className="text-xs mt-1" style={{ color: colors.textSecondary }}>
+            Sunday at 6 PM: your sessions, cardio, food and any new personal bests, in one line.
+          </Text>
         </View>
       </View>
     </Card>

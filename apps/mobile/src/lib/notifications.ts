@@ -1,9 +1,19 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import { computeStreaks, todayISO } from '@fittrack/shared';
+import { computeStreaks, mondayOf, nextRecapAt, toISODate, todayISO, weeklyRecap } from '@fittrack/shared';
 import { useAppStore } from '@/store/useAppStore';
+import { computeAdaptiveTargets } from '@/hooks/use-adaptive-targets';
 
 const REMINDER_CATEGORY = 'streak-reminder';
+/**
+ * Each scheduled notification has its own identifier, so re-arming one never touches the other.
+ * The reminder used to clear with cancelAllScheduledNotificationsAsync — fine while it was the only
+ * notification, and a bug the moment there were two: each refresh would silently delete the other.
+ */
+const STREAK_ID = 'streak-reminder';
+const RECAP_ID = 'weekly-recap';
+/** Sunday evening: the week is all but over, and there's still time to plan the next one. */
+const RECAP_HOUR = 18;
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -41,7 +51,7 @@ async function ensureAndroidChannel() {
 
 export async function cancelReminders(): Promise<void> {
   if (Platform.OS === 'web') return;
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  await Notifications.cancelScheduledNotificationAsync(STREAK_ID);
 }
 
 /**
@@ -91,6 +101,7 @@ export async function refreshStreakReminder(options: {
       : 'Log today to keep your progress moving.';
 
   await Notifications.scheduleNotificationAsync({
+    identifier: STREAK_ID,
     content: { title: 'FitTrack', body, categoryIdentifier: REMINDER_CATEGORY },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -99,3 +110,45 @@ export async function refreshStreakReminder(options: {
     },
   });
 }
+
+/**
+ * Re-arm the Sunday-evening recap with what this week holds right now.
+ *
+ * A notification's text is fixed when it's scheduled, so this is re-run on the same signals as the
+ * reminder (app foreground, settings change). Since every log is made in the app, the last time it
+ * was open is when the last data went in — the text is as current as the data. Off by default.
+ */
+export async function refreshWeeklyRecap(enabled: boolean): Promise<void> {
+  if (Platform.OS === 'web') return;
+  await Notifications.cancelScheduledNotificationAsync(RECAP_ID);
+  if (!enabled) return;
+  if (!(await Notifications.getPermissionsAsync()).granted) return;
+  await ensureAndroidChannel();
+
+  const sunday = nextRecapAt(new Date(), RECAP_HOUR);
+
+  const { profile, scheduledWorkouts, workoutLogs, foodEntries, weightHistory } = useAppStore.getState();
+  if (!profile) return;
+  const weekStart = mondayOf(toISODate(sunday));
+  const { targets } = computeAdaptiveTargets(profile, foodEntries, weightHistory, todayISO());
+  const recap = weeklyRecap({
+    profile,
+    schedule: scheduledWorkouts,
+    workoutLogs,
+    foodEntries,
+    weights: weightHistory,
+    targets,
+    weekStart,
+  });
+
+  await Notifications.scheduleNotificationAsync({
+    identifier: RECAP_ID,
+    content: { title: 'Your week', body: recap.summary, categoryIdentifier: REMINDER_CATEGORY },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: sunday,
+      channelId: Platform.OS === 'android' ? REMINDER_CATEGORY : undefined,
+    },
+  });
+}
+

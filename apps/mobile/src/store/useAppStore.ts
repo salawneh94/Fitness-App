@@ -59,6 +59,8 @@ interface AppState {
    */
   deloads: Deload[];
   insightSnoozes: Record<string, string>;
+  /** Monday of the last weekly recap the user closed on Overview — so it shows once, not daily. */
+  recapSeenWeek: string | null;
 
   setProfile: (profile: Profile) => void;
   updateWeight: (weightKg: number) => void;
@@ -90,6 +92,7 @@ interface AppState {
   cancelDeload: (exerciseId: string) => void;
   /** Hide an insight (by its key) for INSIGHT_SNOOZE_DAYS. */
   snoozeInsight: (key: string) => void;
+  markRecapSeen: (weekStart: string) => void;
 
   /** Wipes all local state, e.g. after the account it belongs to has been deleted. Does not
    * touch the sync queue or Supabase — the caller is expected to have already deleted the
@@ -112,6 +115,7 @@ function emptyState(): Pick<
   | 'savedMeals'
   | 'deloads'
   | 'insightSnoozes'
+  | 'recapSeenWeek'
 > {
   return {
     profile: null,
@@ -127,6 +131,7 @@ function emptyState(): Pick<
     savedMeals: [],
     deloads: [],
     insightSnoozes: {},
+    recapSeenWeek: null,
   };
 }
 
@@ -359,6 +364,8 @@ export const useAppStore = create<AppState>()(
           return { insightSnoozes: { ...live, [key]: addDaysISO(today, INSIGHT_SNOOZE_DAYS) } };
         });
       },
+
+      markRecapSeen: (weekStart) => set({ recapSeenWeek: weekStart }),
 
       resetLocalData: () => set(emptyState()),
     }),

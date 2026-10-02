@@ -9,6 +9,8 @@ import { useAppStore } from '@/store/useAppStore';
 import { useAdaptiveTargets } from '@/hooks/use-adaptive-targets';
 import {
   SLEEP_GOAL_HOURS,
+  addDaysISO,
+  mondayOf,
   STEP_GOAL,
   colors,
   computeStreaks,
@@ -28,6 +30,8 @@ import StrengthChart from '@/components/charts/strength-chart';
 import CalorieTrendChart from '@/components/charts/calorie-trend-chart';
 import MeasurementsCard from '@/components/measurements-card';
 import CardioCard from '@/components/cardio-card';
+import RecapCard from '@/components/recap-card';
+import { useWeeklyRecap } from '@/hooks/use-weekly-recap';
 import PhotoCompareSlider from '@/components/photo-compare-slider';
 import { deletePhotoFile, getPhotoUri, savePhotoFromUri } from '@/lib/photo-store';
 import PressableScale from '@/components/ui/pressable-scale';
@@ -148,6 +152,8 @@ export default function ProgressScreen() {
         <Card title="Weight Trend">
           <WeightChart data={weightHistory} unit={profile.unitSystem} />
         </Card>
+
+        <WeeklyRecapSection />
 
         <CardioCard profile={profile} workoutLogs={workoutLogs} />
 
@@ -322,5 +328,25 @@ function PhotosCard({
         </Modal>
       )}
     </Card>
+  );
+}
+
+/** Any week's recap, last week first — paging back as far as the account goes. */
+function WeeklyRecapSection() {
+  const profile = useAppStore((s) => s.profile)!;
+  const [weeksBack, setWeeksBack] = useState(1);
+  const thisMonday = mondayOf(todayISO());
+  const weekStart = addDaysISO(thisMonday, -7 * weeksBack);
+  const recap = useWeeklyRecap(weekStart);
+  const firstWeek = mondayOf(profile.createdAt.slice(0, 10));
+  if (!recap) return null;
+  const title = weeksBack === 0 ? 'This week so far' : weeksBack === 1 ? 'Last week' : 'Weekly recap';
+  return (
+    <RecapCard
+      recap={recap}
+      title={title}
+      onPrev={weekStart > firstWeek ? () => setWeeksBack((w) => w + 1) : undefined}
+      onNext={weeksBack > 0 ? () => setWeeksBack((w) => w - 1) : undefined}
+    />
   );
 }

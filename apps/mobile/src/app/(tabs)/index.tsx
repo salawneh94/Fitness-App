@@ -5,7 +5,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
-import { GOAL_LABELS, todayISO, withinLastDays } from '@fittrack/shared';
+import { GOAL_LABELS, addDaysISO, mondayOf, todayISO, withinLastDays } from '@fittrack/shared';
 import { computeStreaks, computeRestDayInsight } from '@fittrack/shared';
 import { displayWeight, formatHeight, formatWeight, weightUnitLabel, colors } from '@fittrack/shared';
 import type { Micronutrients } from '@fittrack/shared';
@@ -19,6 +19,8 @@ import RestDayBanner from '@/components/rest-day-banner';
 import SyncStatusBanner from '@/components/sync-status';
 import QuickLogCard from '@/components/quick-log-card';
 import InsightsCard from '@/components/insights-card';
+import RecapCard from '@/components/recap-card';
+import { useWeeklyRecap } from '@/hooks/use-weekly-recap';
 import MotivationalTagline from '@/components/motivational-tagline';
 import Confetti from '@/components/confetti';
 import { useStreakCelebration } from '@/hooks/use-streak-celebration';
@@ -27,6 +29,15 @@ import PressableScale from '@/components/ui/pressable-scale';
 
 export default function OverviewScreen() {
   const profile = useAppStore((s) => s.profile)!; // gated by root layout
+  // Last week's recap, for the first three days of this one — long enough to be seen by anyone who
+  // opens the app early in the week, short enough not to sit there until Friday. Once closed it
+  // stays closed for that week.
+  const recapSeenWeek = useAppStore((s) => s.recapSeenWeek);
+  const markRecapSeen = useAppStore((s) => s.markRecapSeen);
+  const thisMonday = mondayOf(todayISO());
+  const lastWeek = addDaysISO(thisMonday, -7);
+  const lastRecap = useWeeklyRecap(lastWeek);
+  const showRecap = todayISO() <= addDaysISO(thisMonday, 2) && !!lastRecap && !lastRecap.empty && recapSeenWeek !== lastWeek;
   const foodEntries = useAppStore((s) => s.foodEntries);
   const workoutLogs = useAppStore((s) => s.workoutLogs);
   const weightHistory = useAppStore((s) => s.weightHistory);
@@ -174,6 +185,10 @@ export default function OverviewScreen() {
             </View>
           ) : null}
         </Card>
+
+        {showRecap && lastRecap && (
+          <RecapCard recap={lastRecap} title="Last week" onDismiss={() => markRecapSeen(lastWeek)} />
+        )}
 
         <InsightsCard limit={2} />
 

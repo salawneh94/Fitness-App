@@ -26,6 +26,21 @@ export interface AdaptiveTargets {
  * can come from measured data rather than a formula, four independent call sites would be four
  * chances to show a different figure on a different tab.
  */
+/** The same computation outside React — for the weekly-recap notification, which runs headless. */
+export function computeAdaptiveTargets(
+  profile: Profile,
+  foodEntries: { date: string; calories: number; quantity: number }[],
+  weightHistory: { date: string; weightKg: number }[],
+  today: string
+): AdaptiveTargets {
+  const totals = new Map<string, number>();
+  for (const f of foodEntries) totals.set(f.date, (totals.get(f.date) ?? 0) + f.calories * f.quantity);
+  const intake = Array.from(totals, ([date, calories]) => ({ date, calories }));
+  const adaptive = estimateAdaptiveTDEE(profile, weightHistory, intake, today);
+  const measured = isAdaptiveTDEE(adaptive);
+  return { adaptive, measured, targets: calcDailyTargets(profile, measured ? adaptive.tdee : undefined) };
+}
+
 export function useAdaptiveTargets(profile: Profile): AdaptiveTargets {
   const foodEntries = useAppStore((s) => s.foodEntries);
   const weightHistory = useAppStore((s) => s.weightHistory);

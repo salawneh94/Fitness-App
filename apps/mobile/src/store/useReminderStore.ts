@@ -1,12 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { refreshStreakReminder, requestReminderPermission } from '@/lib/notifications';
+import { refreshStreakReminder, refreshWeeklyRecap, requestReminderPermission } from '@/lib/notifications';
 
 interface ReminderState {
   enabled: boolean;
   hour: number;
   minute: number;
+  /** The Sunday-evening recap — its own opt-in, separate from the daily reminder. */
+  weeklyRecap: boolean;
+  setWeeklyRecap: (enabled: boolean) => Promise<boolean>;
   /** Turn the reminder on (asking for permission first) or off. Returns the resulting state. */
   setEnabled: (enabled: boolean) => Promise<boolean>;
   setTime: (hour: number, minute: number) => Promise<void>;
@@ -25,6 +28,14 @@ export const useReminderStore = create<ReminderState>()(
       enabled: false,
       hour: DEFAULT_HOUR,
       minute: 0,
+      weeklyRecap: false,
+
+      setWeeklyRecap: async (enabled) => {
+        const granted = enabled ? await requestReminderPermission() : false;
+        set({ weeklyRecap: granted });
+        await refreshWeeklyRecap(granted);
+        return granted;
+      },
 
       setEnabled: async (enabled) => {
         if (!enabled) {
@@ -44,14 +55,15 @@ export const useReminderStore = create<ReminderState>()(
       },
 
       refresh: async () => {
-        const { enabled, hour, minute } = get();
+        const { enabled, hour, minute, weeklyRecap } = get();
         await refreshStreakReminder({ enabled, hour, minute });
+        await refreshWeeklyRecap(weeklyRecap);
       },
     }),
     {
       name: 'fittrack-reminders',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (s) => ({ enabled: s.enabled, hour: s.hour, minute: s.minute }),
+      partialize: (s) => ({ enabled: s.enabled, hour: s.hour, minute: s.minute, weeklyRecap: s.weeklyRecap }),
       // Re-arm on rehydrate: a device that was rebooted has lost its scheduled notification, and
       // the stored preference is the only record that one was wanted.
       onRehydrateStorage: () => (state) => {
