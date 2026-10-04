@@ -9,6 +9,7 @@ import {
   foodsFromDay,
   highProteinPicks,
   normalizeFoodText,
+  parseISODate,
   recentFoods,
   scalePer100g,
   searchGenericFoods,
@@ -131,9 +132,12 @@ export default function AddFoodModal({
   meal,
   onClose,
   highlight,
+  date = todayISO(),
 }: {
   meal: MealType;
   onClose: () => void;
+  /** The day being logged — today unless the user is filling in an earlier one. */
+  date?: string;
   /** Open on a focused list — the protein insight sends people here to act on it. */
   highlight?: 'protein';
 }) {
@@ -155,8 +159,8 @@ export default function AddFoodModal({
   const recentPool = useMemo(() => recentFoods(foodEntries, meal, 300), [foodEntries, meal]);
 
   const yesterdays = useMemo(
-    () => foodsFromDay(foodEntries, addDaysISO(todayISO(), -1), meal),
-    [foodEntries, meal]
+    () => foodsFromDay(foodEntries, addDaysISO(date, -1), meal),
+    [foodEntries, meal, date]
   );
 
   const proteinPicks = useMemo(
@@ -189,7 +193,7 @@ export default function AddFoodModal({
 
   /** Re-log a previously eaten food as a new entry today — never a copy of the old row. */
   function logRecent(food: RecentFood) {
-    addFoodEntry({ ...food, date: todayISO(), meal });
+    addFoodEntry({ ...food, date, meal });
   }
 
   function openConfirm(next: FoodCandidate) {
@@ -248,7 +252,7 @@ export default function AddFoodModal({
   function confirmCandidate() {
     if (!candidate || gramsValue <= 0) return;
     addFoodEntry({
-      date: todayISO(),
+      date,
       meal,
       name: candidate.name,
       brand: candidate.brand,
@@ -264,7 +268,7 @@ export default function AddFoodModal({
   function submitManual() {
     if (!manual.name.trim()) return;
     addFoodEntry({
-      date: todayISO(),
+      date,
       meal,
       name: manual.name.trim(),
       quantity: Number(manual.quantity) || 1,
@@ -283,8 +287,11 @@ export default function AddFoodModal({
       <View className="flex-1" style={{ backgroundColor: colors.background }}>
         <ScrollView className="flex-1 p-5" keyboardShouldPersistTaps="handled">
           <View className="flex-row items-center justify-between mb-4">
-            <Text className="font-semibold capitalize" style={{ color: colors.textPrimary }}>
-              Add to {meal}
+            <Text className="font-semibold" style={{ color: colors.textPrimary }}>
+              Add to {MEAL_LABELS[meal]}
+              {date !== todayISO()
+                ? ` · ${parseISODate(date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}`
+                : ''}
             </Text>
             <PressableScale accessibilityLabel="Close" accessibilityRole="button" onPress={onClose} className="p-1">
               <X size={18} color={colors.textPrimary} />
@@ -462,7 +469,7 @@ export default function AddFoodModal({
                   {yesterdays.length > 0 && (
                     <ChoiceRow
                       icon={History}
-                      title={`Repeat yesterday's ${MEAL_LABELS[meal]}`}
+                      title={`Repeat ${date === todayISO() ? 'yesterday' : parseISODate(addDaysISO(date, -1)).toLocaleDateString(undefined, { weekday: 'long' })}'s ${MEAL_LABELS[meal]}`}
                       sub={`${yesterdays.length} item${yesterdays.length === 1 ? '' : 's'} · ${Math.round(
                         yesterdays.reduce((s, f) => s + f.calories * f.quantity, 0)
                       )} kcal`}
@@ -519,7 +526,7 @@ export default function AddFoodModal({
                   <PressableScale
                     key={m.id}
                     onPress={() => {
-                      logSavedMeal(m.id, meal);
+                      logSavedMeal(m.id, meal, date);
                       onClose();
                     }}
                     className="flex-row items-center justify-between p-3 rounded-xl border"

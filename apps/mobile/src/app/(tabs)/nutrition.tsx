@@ -1,18 +1,20 @@
 import { useMemo, useState } from 'react';
-import { Plus, ScanBarcode, Search, Trash2 } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Plus, ScanBarcode, Search, Trash2 } from 'lucide-react-native';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import { useAdaptiveTargets } from '@/hooks/use-adaptive-targets';
 import AdaptiveTargetCard from '@/components/adaptive-target-card';
 import type { FoodEntry, MealType, Micronutrients } from '@fittrack/shared';
-import { colors, todayISO } from '@fittrack/shared';
+import { addDaysISO, colors, parseISODate, todayISO } from '@fittrack/shared';
 import Card from '@/components/ui/card';
 import CalorieRing from '@/components/charts/calorie-ring';
 import MacroBars from '@/components/charts/macro-bars';
 import MicronutrientList from '@/components/micronutrient-list';
 import AddFoodModal from '@/components/add-food-modal';
 import SavedMealsSection from '@/components/saved-meals-section';
+import EditFoodEntryModal from '@/components/edit-food-entry-modal';
+import UndoToast from '@/components/ui/undo-toast';
 import WaterCard from '@/components/water-card';
 import PressableScale from '@/components/ui/pressable-scale';
 
@@ -27,9 +29,23 @@ export default function NutritionScreen() {
   const profile = useAppStore((s) => s.profile)!; // gated by root layout
   const foodEntries = useAppStore((s) => s.foodEntries);
   const removeFoodEntry = useAppStore((s) => s.removeFoodEntry);
+  const restoreFoodEntry = useAppStore((s) => s.restoreFoodEntry);
   const [addingMeal, setAddingMeal] = useState<MealType | null>(null);
+  const [editing, setEditing] = useState<FoodEntry | null>(null);
+  const [undo, setUndo] = useState<FoodEntry | null>(null);
 
-  const today = todayISO();
+  // The day on screen. Everything here — totals, meals, water, adding — follows it, so a forgotten
+  // dinner can be filled in the next morning. Forgotten days aren't only a gap in the diary: the
+  // adaptive target won't measure maintenance until most days are fully logged.
+  const actualToday = todayISO();
+  const [day, setDay] = useState(actualToday);
+  const today = day;
+  const isToday = day === actualToday;
+  const dayLabel = isToday
+    ? 'Today'
+    : day === addDaysISO(actualToday, -1)
+      ? 'Yesterday'
+      : parseISODate(day).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
   const adaptiveTargets = useAdaptiveTargets(profile);
   const { targets } = adaptiveTargets;
 
@@ -77,6 +93,41 @@ export default function NutritionScreen() {
           </Text>
         </View>
 
+        <View className="flex-row items-center justify-between rounded-2xl px-2 py-1" style={{ backgroundColor: colors.chartSurface }}>
+          <PressableScale
+            hapticStyle="selection"
+            accessibilityRole="button"
+            accessibilityLabel="Previous day"
+            onPress={() => setDay((d) => addDaysISO(d, -1))}
+            className="p-2"
+          >
+            <ChevronLeft size={20} color={colors.textSecondary} />
+          </PressableScale>
+          <View className="items-center">
+            <Text className="text-sm font-semibold" style={{ color: colors.textPrimary }} accessibilityRole="header">
+              {dayLabel}
+            </Text>
+            {!isToday && (
+              <PressableScale hapticStyle="selection" accessibilityRole="button" onPress={() => setDay(actualToday)}>
+                <Text className="text-xs" style={{ color: colors.brandPrimary }}>
+                  Back to today
+                </Text>
+              </PressableScale>
+            )}
+          </View>
+          <PressableScale
+            hapticStyle="selection"
+            accessibilityRole="button"
+            accessibilityLabel="Next day"
+            disabled={isToday}
+            onPress={() => setDay((d) => (d < actualToday ? addDaysISO(d, 1) : d))}
+            className="p-2"
+            style={{ opacity: isToday ? 0.3 : 1 }}
+          >
+            <ChevronRight size={20} color={colors.textSecondary} />
+          </PressableScale>
+        </View>
+
         <Card title="Calories">
           <CalorieRing consumed={consumed.calories} target={targets.calories} />
         </Card>
@@ -91,13 +142,13 @@ export default function NutritionScreen() {
           />
         </Card>
 
-        <WaterCard profile={profile} />
+        <WaterCard profile={profile} date={day} />
 
-        <Card title="Micronutrients Today">
+        <Card title={isToday ? 'Micronutrients Today' : 'Micronutrients'}>
           <MicronutrientList totals={microTotals} />
         </Card>
 
-        <SavedMealsSection />
+        <SavedMealsSection date={day} />
 
         <View style={{ gap: 16 }}>
           {MEALS.map(({ key, label }) => {
@@ -125,7 +176,12 @@ export default function NutritionScreen() {
                         className="flex-row items-center justify-between py-2 border-b"
                         style={{ borderColor: colors.gridline }}
                       >
-                        <View className="flex-1 min-w-0">
+                        <PressableScale
+                          accessibilityRole="button"
+                          accessibilityLabel={`Edit ${e.name}`}
+                          onPress={() => setEditing(e)}
+                          className="flex-1 min-w-0"
+                        >
                           <View className="flex-row items-center gap-1.5">
                             {e.source === 'barcode' && <ScanBarcode size={13} color={colors.textMuted} />}
                             {e.source === 'search' && <Search size={13} color={colors.textMuted} />}
@@ -136,8 +192,17 @@ export default function NutritionScreen() {
                           <Text className="text-xs" style={{ color: colors.textMuted }}>
                             {e.quantity} × {e.servingLabel ?? 'serving'} · {Math.round(e.calories * e.quantity)} kcal
                           </Text>
-                        </View>
-                        <PressableScale accessibilityLabel={`Remove ${e.name}`} accessibilityRole="button" hapticStyle="warning" onPress={() => removeFoodEntry(e.id)} className="p-1.5">
+                        </PressableScale>
+                        <PressableScale
+                          accessibilityLabel={`Remove ${e.name}`}
+                          accessibilityRole="button"
+                          hapticStyle="warning"
+                          onPress={() => {
+                            removeFoodEntry(e.id);
+                            setUndo(e);
+                          }}
+                          className="p-1.5"
+                        >
                           <Trash2 size={15} color={colors.textMuted} />
                         </PressableScale>
                       </View>
@@ -156,7 +221,16 @@ export default function NutritionScreen() {
         </View>
       </ScrollView>
 
-      {addingMeal && <AddFoodModal meal={addingMeal} onClose={() => setAddingMeal(null)} />}
+      {addingMeal && <AddFoodModal meal={addingMeal} date={day} onClose={() => setAddingMeal(null)} />}
+      {editing && <EditFoodEntryModal entry={editing} onClose={() => setEditing(null)} />}
+      {undo && (
+        <UndoToast
+          key={undo.id}
+          message={`Removed ${undo.name}`}
+          onUndo={() => restoreFoodEntry(undo)}
+          onDone={() => setUndo(null)}
+        />
+      )}
     </SafeAreaView>
   );
 }

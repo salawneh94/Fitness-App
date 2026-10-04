@@ -14,12 +14,13 @@ import PressableScale from '@/components/ui/pressable-scale';
  * modal, no number pad. The minus button takes back one glass — for the double-tap, not for
  * bookkeeping — and the day's total is all that's stored.
  */
-export default function WaterCard({ profile }: { profile: Profile }) {
+export default function WaterCard({ profile, date }: { profile: Profile; date?: string }) {
   const waterHistory = useAppStore((s) => s.waterHistory);
   const workoutLogs = useAppStore((s) => s.workoutLogs);
   const addWater = useAppStore((s) => s.addWater);
 
-  const today = todayISO();
+  const today = date ?? todayISO();
+  const isToday = today === todayISO();
   const ml = waterHistory.find((w) => w.date === today)?.ml ?? 0;
   const trainedToday = useMemo(() => workoutLogs.some((l) => l.date === today), [workoutLogs, today]);
   const target = waterTargetMl(profile.sex, trainedToday);
@@ -47,9 +48,9 @@ export default function WaterCard({ profile }: { profile: Profile }) {
       </View>
       <Text className="text-xs mb-4" style={{ color: colors.textMuted }}>
         {reached
-          ? 'Goal reached for today.'
+          ? `Goal reached for ${isToday ? 'today' : 'the day'}.`
           : `${formatWater(target - ml, profile.unitSystem)} to go`}
-        {trainedToday ? ' · includes extra for today’s workout' : ''}
+        {trainedToday ? ` · includes extra for ${isToday ? 'today’s' : 'that day’s'} workout` : ''}
       </Text>
 
       <View className="flex-row items-center gap-2">
@@ -58,7 +59,7 @@ export default function WaterCard({ profile }: { profile: Profile }) {
           accessibilityLabel={`Remove ${formatWater(glass, profile.unitSystem)}`}
           hapticStyle="selection"
           disabled={ml === 0}
-          onPress={() => addWater(-glass)}
+          onPress={() => addWater(-glass, today)}
           className="w-10 h-10 rounded-full border items-center justify-center"
           style={{ borderColor: colors.gridline, opacity: ml === 0 ? 0.4 : 1 }}
         >
@@ -73,7 +74,7 @@ export default function WaterCard({ profile }: { profile: Profile }) {
             accessibilityRole="button"
             accessibilityLabel={`Add a ${label.toLowerCase()}, ${formatWater(amount, profile.unitSystem)}`}
             hapticStyle="success"
-            onPress={() => addWater(amount)}
+            onPress={() => addWater(amount, today)}
             className="flex-1 flex-row items-center justify-center gap-1.5 py-2.5 rounded-full"
             style={{ backgroundColor: 'rgba(34,211,238,0.12)' }}
           >

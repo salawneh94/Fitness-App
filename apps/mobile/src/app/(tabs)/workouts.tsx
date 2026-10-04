@@ -26,6 +26,8 @@ import TextField from '@/components/ui/text-field';
 import PressableScale from '@/components/ui/pressable-scale';
 import EditWorkoutLogModal from '@/components/edit-workout-log-modal';
 import LogCardioModal from '@/components/log-cardio-modal';
+import UndoToast from '@/components/ui/undo-toast';
+import DayChips from '@/components/ui/day-chips';
 
 const WEEKDAYS: Weekday[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -36,6 +38,8 @@ export default function WorkoutsScreen() {
   const workoutLogs = useAppStore((s) => s.workoutLogs);
   const addWorkoutLog = useAppStore((s) => s.addWorkoutLog);
   const removeWorkoutLog = useAppStore((s) => s.removeWorkoutLog);
+  const restoreWorkoutLog = useAppStore((s) => s.restoreWorkoutLog);
+  const [undoLog, setUndoLog] = useState<WorkoutLogEntry | null>(null);
   const updateWorkoutLog = useAppStore((s) => s.updateWorkoutLog);
 
   const [activeDay, setActiveDay] = useState<Weekday | null>(null);
@@ -205,7 +209,10 @@ export default function WorkoutsScreen() {
                   >
                     <Pencil size={15} color={colors.textMuted} />
                   </PressableScale>
-                  <PressableScale accessibilityLabel="Delete workout log" accessibilityRole="button" hapticStyle="warning" onPress={() => removeWorkoutLog(log.id)} className="p-1.5">
+                  <PressableScale accessibilityLabel="Delete workout log" accessibilityRole="button" hapticStyle="warning" onPress={() => {
+                      removeWorkoutLog(log.id);
+                      setUndoLog(log);
+                    }} className="p-1.5">
                     <Trash2 size={15} color={colors.textMuted} />
                   </PressableScale>
                 </View>
@@ -258,14 +265,23 @@ export default function WorkoutsScreen() {
           workout={loggingDay}
           unit={profile.unitSystem}
           onClose={() => setLoggingDay(null)}
-          onSave={(durationMin, caloriesBurned, notes, exerciseLogs) => {
-            addWorkoutLog({ date: todayISO(), workoutName: loggingDay.name, durationMin, caloriesBurned, notes, exerciseLogs });
+          onSave={(date, durationMin, caloriesBurned, notes, exerciseLogs) => {
+            addWorkoutLog({ date, workoutName: loggingDay.name, durationMin, caloriesBurned, notes, exerciseLogs });
             setLoggingDay(null);
           }}
         />
       )}
 
       {loggingCardio && <LogCardioModal onClose={() => setLoggingCardio(false)} />}
+
+      {undoLog && (
+        <UndoToast
+          key={undoLog.id}
+          message={`Removed ${undoLog.workoutName}`}
+          onUndo={() => restoreWorkoutLog(undoLog)}
+          onDone={() => setUndoLog(null)}
+        />
+      )}
 
       {playingWorkout && (
         <GuidedWorkoutPlayer
@@ -484,8 +500,9 @@ function LogWorkoutModal({
   workout: ScheduledWorkout;
   unit: UnitSystem;
   onClose: () => void;
-  onSave: (durationMin: number, caloriesBurned: number | undefined, notes: string | undefined, exerciseLogs: ExerciseLogEntry[]) => void;
+  onSave: (date: string, durationMin: number, caloriesBurned: number | undefined, notes: string | undefined, exerciseLogs: ExerciseLogEntry[]) => void;
 }) {
+  const [date, setDate] = useState(todayISO());
   const [durationMin, setDurationMin] = useState('45');
   const [caloriesBurned, setCaloriesBurned] = useState('');
   const [notes, setNotes] = useState('');
@@ -522,7 +539,7 @@ function LogWorkoutModal({
         sets: setsByExercise[ex.id].filter((s) => s.weightKg > 0 || s.reps > 0),
       }))
       .filter((e) => e.sets.length > 0);
-    onSave(Number(durationMin) || 0, caloriesBurned === '' ? undefined : Number(caloriesBurned), notes || undefined, exerciseLogs);
+    onSave(date, Number(durationMin) || 0, caloriesBurned === '' ? undefined : Number(caloriesBurned), notes || undefined, exerciseLogs);
   }
 
   return (
@@ -536,6 +553,10 @@ function LogWorkoutModal({
             <PressableScale accessibilityLabel="Close" accessibilityRole="button" onPress={onClose} className="p-1">
               <X size={18} color={colors.textPrimary} />
             </PressableScale>
+          </View>
+
+          <View className="mb-4">
+            <DayChips value={date} onChange={setDate} />
           </View>
 
           <View className="flex-row gap-3 mb-4">

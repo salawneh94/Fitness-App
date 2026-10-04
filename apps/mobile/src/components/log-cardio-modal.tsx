@@ -13,6 +13,7 @@ import {
 } from '@fittrack/shared';
 import { useAppStore } from '@/store/useAppStore';
 import TextField from './ui/text-field';
+import DayChips from './ui/day-chips';
 import PressableScale from './ui/pressable-scale';
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -40,6 +41,7 @@ export default function LogCardioModal({ onClose, initialActivity = 'run' }: { o
   const [distance, setDistance] = useState('');
   const [calories, setCalories] = useState<string | null>(null); // null = use the estimate
   const [notes, setNotes] = useState('');
+  const [date, setDate] = useState(todayISO());
 
   const durationMin = Number(duration) || 0;
   const distanceKm = distance === '' ? undefined : toKmFromDisplay(Number(distance) || 0, unit) || undefined;
@@ -52,7 +54,7 @@ export default function LogCardioModal({ onClose, initialActivity = 'run' }: { o
   function save() {
     if (durationMin <= 0) return;
     addWorkoutLog({
-      date: todayISO(),
+      date,
       workoutName: label,
       durationMin,
       caloriesBurned: caloriesValue === '' ? undefined : Number(caloriesValue) || undefined,
@@ -73,6 +75,10 @@ export default function LogCardioModal({ onClose, initialActivity = 'run' }: { o
             <PressableScale accessibilityLabel="Close" accessibilityRole="button" onPress={onClose} className="p-1">
               <X size={18} color={colors.textPrimary} />
             </PressableScale>
+          </View>
+
+          <View className="mb-4">
+            <DayChips value={date} onChange={setDate} />
           </View>
 
           <View className="flex-row flex-wrap gap-2 mb-5">

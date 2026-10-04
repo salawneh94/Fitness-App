@@ -15,7 +15,7 @@ const MEAL_CHIPS: { key: MealType; label: string }[] = [
   { key: 'snack', label: 'S' },
 ];
 
-export default function SavedMealsSection() {
+export default function SavedMealsSection({ date }: { date?: string }) {
   const savedMeals = useAppStore((s) => s.savedMeals);
   const removeSavedMeal = useAppStore((s) => s.removeSavedMeal);
   const logSavedMeal = useAppStore((s) => s.logSavedMeal);
@@ -62,7 +62,7 @@ export default function SavedMealsSection() {
                   {MEAL_CHIPS.map((c) => (
                     <PressableScale accessibilityLabel={`Log ${meal.name} as ${c.key}`} accessibilityRole="button" hapticStyle="success"
                       key={c.key}
-                      onPress={() => logSavedMeal(meal.id, c.key)}
+                      onPress={() => logSavedMeal(meal.id, c.key, date)}
                       className="w-7 h-7 rounded-full items-center justify-center border"
                       style={{ borderColor: colors.gridline }}
                     >

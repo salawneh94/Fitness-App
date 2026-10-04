@@ -66,12 +66,17 @@ interface AppState {
   updateWeight: (weightKg: number) => void;
   updateSteps: (steps: number) => void;
   updateSleep: (hours: number) => void;
-  /** Add to (or, with a negative amount, take back from) today's water total. */
-  addWater: (deltaMl: number) => void;
+  /** Add to (or, with a negative amount, take back from) a day's water total — today by default. */
+  addWater: (deltaMl: number, date?: string) => void;
   updateMeasurement: (fields: Omit<BodyMeasurementEntry, 'date'>) => void;
 
   addFoodEntry: (entry: Omit<FoodEntry, 'id' | 'loggedAt'>) => void;
   removeFoodEntry: (id: string) => void;
+  /** Change servings or meal on an entry already logged. */
+  updateFoodEntry: (id: string, patch: Partial<Pick<FoodEntry, 'quantity' | 'meal'>>) => void;
+  /** Put back an entry just removed — same id, so the sync converges whether or not the delete
+   * already reached the server. */
+  restoreFoodEntry: (entry: FoodEntry) => void;
 
   setScheduledWorkouts: (workouts: ScheduledWorkout[]) => void;
   /** Lay a plan template out as this week's schedule and start counting its weeks from today. */
@@ -80,13 +85,14 @@ interface AppState {
   /** Correct a session after the fact — a mistyped weight shouldn't mean re-entering the lot. */
   updateWorkoutLog: (id: string, patch: Partial<Omit<WorkoutLogEntry, 'id'>>) => void;
   removeWorkoutLog: (id: string) => void;
+  restoreWorkoutLog: (entry: WorkoutLogEntry) => void;
 
   addProgressPhoto: (photo: Omit<ProgressPhoto, 'id'>) => string;
   removeProgressPhoto: (id: string) => void;
 
   addSavedMeal: (name: string, items: SavedMealItem[]) => void;
   removeSavedMeal: (id: string) => void;
-  logSavedMeal: (mealTemplateId: string, targetMeal: MealType) => void;
+  logSavedMeal: (mealTemplateId: string, targetMeal: MealType, date?: string) => void;
 
   startDeload: (deload: Omit<Deload, 'createdOn'>) => void;
   cancelDeload: (exerciseId: string) => void;
@@ -196,8 +202,7 @@ export const useAppStore = create<AppState>()(
         if (userId) push.sleep(userId, { date: todayISO(), hours });
       },
 
-      addWater: (deltaMl) => {
-        const date = todayISO();
+      addWater: (deltaMl, date = todayISO()) => {
         const current = get().waterHistory.find((w) => w.date === date)?.ml ?? 0;
         // Floored at zero so an undo tapped once too often can't produce a negative day.
         const entry = { date, ml: Math.max(0, Math.round(current + deltaMl)) };
@@ -234,6 +239,25 @@ export const useAppStore = create<AppState>()(
       removeFoodEntry: (id) => {
         set((state) => ({ foodEntries: state.foodEntries.filter((e) => e.id !== id) }));
         if (currentUserId()) push.deleteFoodEntry(id);
+      },
+
+      updateFoodEntry: (id, patch) => {
+        let updated: FoodEntry | undefined;
+        set((state) => ({
+          foodEntries: state.foodEntries.map((e) => (e.id === id ? (updated = { ...e, ...patch }) : e)),
+        }));
+        const userId = currentUserId();
+        if (userId && updated) push.foodEntry(userId, updated);
+      },
+
+      restoreFoodEntry: (entry) => {
+        set((state) => ({
+          foodEntries: state.foodEntries.some((e) => e.id === entry.id) ? state.foodEntries : [...state.foodEntries, entry],
+        }));
+        // The queue keeps only the newest op per row, so this upsert replaces a delete that hasn't
+        // been sent yet — and recreates the row, under the same id, if it has.
+        const userId = currentUserId();
+        if (userId) push.foodEntry(userId, entry);
       },
 
       setScheduledWorkouts: (workouts) => {
@@ -293,6 +317,14 @@ export const useAppStore = create<AppState>()(
         if (currentUserId()) push.deleteWorkoutLog(id);
       },
 
+      restoreWorkoutLog: (entry) => {
+        set((state) => ({
+          workoutLogs: state.workoutLogs.some((e) => e.id === entry.id) ? state.workoutLogs : [...state.workoutLogs, entry],
+        }));
+        const userId = currentUserId();
+        if (userId) push.workoutLog(userId, entry);
+      },
+
       addProgressPhoto: (photo) => {
         const id = uid();
         const full = { ...photo, id };
@@ -325,10 +357,9 @@ export const useAppStore = create<AppState>()(
         if (currentUserId()) push.deleteSavedMeal(id);
       },
 
-      logSavedMeal: (mealTemplateId, targetMeal) => {
+      logSavedMeal: (mealTemplateId, targetMeal, date = todayISO()) => {
         const meal = get().savedMeals.find((m) => m.id === mealTemplateId);
         if (!meal) return;
-        const date = todayISO();
         const loggedAt = new Date().toISOString();
         const newEntries = meal.items.map((item) => ({
           ...item,
