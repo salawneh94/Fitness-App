@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Check } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { todayISO } from '@fittrack/shared';
+import { displayWeight, todayISO } from '@fittrack/shared';
 import Card from './ui/Card';
 import WeightInput from './ui/WeightInput';
 
@@ -18,7 +18,9 @@ export default function QuickLogCard() {
   const updateSleep = useAppStore((s) => s.updateSleep);
 
   const today = todayISO();
-  const todayWeight = weightHistory.find((w) => w.date === today)?.weightKg ?? profile?.weightKg ?? '';
+  // Only a weigh-in actually taken today fills the field. The last known weight is a placeholder:
+  // pre-filling it meant saving steps alone also logged "today: same weight as before".
+  const todayWeight = weightHistory.find((w) => w.date === today)?.weightKg ?? '';
   const todaySteps = stepsHistory.find((s) => s.date === today)?.steps ?? '';
   const todaySleep = sleepHistory.find((s) => s.date === today)?.hours ?? '';
 
@@ -40,7 +42,13 @@ export default function QuickLogCard() {
       <div className="grid grid-cols-3 gap-3 mb-3">
         <label className="block">
           <span className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Weight</span>
-          <WeightInput valueKg={weight} onChangeKg={setWeight} unit={profile?.unitSystem ?? 'metric'} min={0} />
+          <WeightInput
+            valueKg={weight}
+            onChangeKg={setWeight}
+            unit={profile?.unitSystem ?? 'metric'}
+            min={0}
+            placeholder={profile ? String(Math.round(displayWeight(profile.weightKg, profile.unitSystem) * 10) / 10) : undefined}
+          />
         </label>
         <label className="block">
           <span className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Steps</span>

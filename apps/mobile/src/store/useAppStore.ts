@@ -156,20 +156,23 @@ export const useAppStore = create<AppState>()(
       ...emptyState(),
 
       setProfile: (profile) => {
-        set((state) => {
-          const alreadyLogged = state.weightHistory.some((w) => w.date === todayISO());
-          return {
-            profile,
-            weightHistory: alreadyLogged
-              ? state.weightHistory
-              : [...state.weightHistory, { date: todayISO(), weightKg: profile.weightKg }],
-          };
-        });
+        // A weigh-in is recorded only when there's a weight to record: the first one, at
+        // onboarding, or a weight the user actually changed. Saving Settings to switch goal or
+        // units used to log "today: same as before" every time — a reading nobody took, which
+        // flattens the trend the insights and measured maintenance are fitted through.
+        const previous = get();
+        const weighIn =
+          previous.weightHistory.length === 0 || profile.weightKg !== previous.profile?.weightKg
+            ? { date: todayISO(), weightKg: profile.weightKg }
+            : null;
+        set((state) => ({
+          profile,
+          weightHistory: weighIn ? upsertByDate(state.weightHistory, weighIn) : state.weightHistory,
+        }));
         const userId = currentUserId();
         if (userId) {
           push.profile(userId, profile);
-          const entry = get().weightHistory.find((w) => w.date === todayISO());
-          if (entry) push.weight(userId, entry);
+          if (weighIn) push.weight(userId, weighIn);
         }
       },
 

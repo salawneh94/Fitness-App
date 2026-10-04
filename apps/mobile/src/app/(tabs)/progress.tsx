@@ -297,7 +297,7 @@ function PhotosCard({
               )}
               <View className="flex-row items-center justify-between">
                 <Text className="text-white text-sm">
-                  {new Date(photos.find((p) => p.id === viewing)!.date).toLocaleDateString(undefined, {
+                  {parseISODate(photos.find((p) => p.id === viewing)!.date).toLocaleDateString(undefined, {
                     month: 'long',
                     day: 'numeric',
                     year: 'numeric',

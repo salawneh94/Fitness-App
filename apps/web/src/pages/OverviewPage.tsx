@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Flame, Clock, Target, TrendingUp, Pencil, Zap } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { calcDailyTargets, GOAL_LABELS, todayISO, withinLastDays } from '@fittrack/shared';
+import { calcDailyTargets, GOAL_LABELS, parseISODate, todayISO, withinLastDays } from '@fittrack/shared';
 import { computeStreaks, computeRestDayInsight } from '@fittrack/shared';
 import { displayWeight, formatHeight, formatWeight, weightUnitLabel } from '@fittrack/shared';
 import Card from '../components/ui/Card';
@@ -150,7 +150,7 @@ export default function OverviewPage() {
               formatter={(n) => `${n >= 0 ? '+' : ''}${n.toFixed(1)}`}
             />
           }
-          sub={`${weightUnitLabel(profile.unitSystem)} since ${weightHistory[0] ? new Date(weightHistory[0].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'start'}`}
+          sub={`${weightUnitLabel(profile.unitSystem)} since ${weightHistory[0] ? parseISODate(weightHistory[0].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'start'}`}
           accent="var(--series-4)"
         />
         <StatTile icon={Zap} label="Current Streak" value={<CountUp value={streaks.currentStreak} suffix="d" />} sub="days logged in a row" accent="var(--brand-lime)" />

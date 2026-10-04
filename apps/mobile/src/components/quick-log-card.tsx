@@ -18,7 +18,9 @@ export default function QuickLogCard() {
   const updateSleep = useAppStore((s) => s.updateSleep);
 
   const today = todayISO();
-  const todayWeight = weightHistory.find((w) => w.date === today)?.weightKg ?? profile?.weightKg ?? '';
+  // Only a weigh-in actually taken today fills the field; the last known weight is a hint. Pre-filling
+  // it meant saving steps alone also logged "today: same weight as before" — a reading nobody took.
+  const todayWeight = weightHistory.find((w) => w.date === today)?.weightKg ?? '';
   const todaySteps = stepsHistory.find((s) => s.date === today)?.steps ?? '';
   const todaySleep = sleepHistory.find((s) => s.date === today)?.hours ?? '';
 
@@ -42,7 +44,7 @@ export default function QuickLogCard() {
           <Text className="text-xs font-medium mb-1" style={{ color: colors.textMuted }}>
             Weight
           </Text>
-          <WeightInput valueKg={weight} onChangeKg={setWeight} unit={profile?.unitSystem ?? 'metric'} />
+          <WeightInput valueKg={weight} onChangeKg={setWeight} unit={profile?.unitSystem ?? 'metric'} placeholderKg={profile?.weightKg} accessibilityLabel="Weight" />
         </View>
         <View className="flex-1">
           <Text className="text-xs font-medium mb-1" style={{ color: colors.textMuted }}>

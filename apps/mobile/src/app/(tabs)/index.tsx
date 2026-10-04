@@ -5,7 +5,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
-import { GOAL_LABELS, addDaysISO, mondayOf, todayISO, withinLastDays } from '@fittrack/shared';
+import { GOAL_LABELS, addDaysISO, mondayOf, parseISODate, todayISO, withinLastDays } from '@fittrack/shared';
 import { computeStreaks, computeRestDayInsight } from '@fittrack/shared';
 import { displayWeight, formatHeight, formatWeight, weightUnitLabel, colors } from '@fittrack/shared';
 import type { Micronutrients } from '@fittrack/shared';
@@ -91,7 +91,13 @@ export default function OverviewScreen() {
     return workoutLogs.filter((w) => withinLastDays(w.date, today, 7)).reduce((sum, w) => sum + w.durationMin, 0);
   }, [workoutLogs]);
 
-  const startWeight = weightHistory[0]?.weightKg ?? profile.weightKg;
+  // The earliest weigh-in by date — not the first one stored, which since backfilling can be a
+  // later day filled in after the fact.
+  const firstWeighIn = useMemo(
+    () => weightHistory.reduce<(typeof weightHistory)[number] | undefined>((min, w) => (!min || w.date < min.date ? w : min), undefined),
+    [weightHistory]
+  );
+  const startWeight = firstWeighIn?.weightKg ?? profile.weightKg;
   const weightDelta = profile.weightKg - startWeight;
 
   const streaks = useMemo(
@@ -232,7 +238,7 @@ export default function OverviewScreen() {
                   formatter={(n) => `${n >= 0 ? '+' : ''}${n.toFixed(1)}`}
                 />
               }
-              sub={`${weightUnitLabel(profile.unitSystem)} since ${weightHistory[0] ? new Date(weightHistory[0].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'start'}`}
+              sub={`${weightUnitLabel(profile.unitSystem)} since ${firstWeighIn ? parseISODate(firstWeighIn.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'start'}`}
               accent={colors.series4}
             />
           </View>

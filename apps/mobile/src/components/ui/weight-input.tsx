@@ -8,10 +8,15 @@ export default function WeightInput({
   valueKg,
   onChangeKg,
   unit,
+  placeholderKg,
+  accessibilityLabel,
 }: {
   valueKg: number | '';
   onChangeKg: (kg: number | '') => void;
   unit: UnitSystem;
+  /** A hint, shown greyed out and never saved — e.g. the last weight logged. */
+  placeholderKg?: number;
+  accessibilityLabel?: string;
 }) {
   const displayValue = valueKg === '' ? '' : String(Math.round(displayWeight(valueKg, unit) * 10) / 10);
 
@@ -21,6 +26,8 @@ export default function WeightInput({
         keyboardType="numeric"
         value={displayValue}
         onChangeText={(raw) => onChangeKg(raw === '' ? '' : toKgFromDisplay(Number(raw), unit))}
+        placeholder={placeholderKg === undefined ? undefined : String(Math.round(displayWeight(placeholderKg, unit) * 10) / 10)}
+        accessibilityLabel={accessibilityLabel}
         style={{ paddingRight: 48 }}
       />
       <Text className="absolute right-4 text-xs" style={{ color: colors.textMuted }} pointerEvents="none">

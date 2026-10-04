@@ -107,6 +107,9 @@ export default function EditProfileForm() {
       return;
     }
     const profile: Profile = {
+      // Fields this form doesn't edit (the active plan, for one) carry over rather than being
+      // dropped — saving a goal change used to quietly end the plan you were following.
+      ...existing,
       ...form,
       age: Number(form.age),
       heightCm: Number(form.heightCm),

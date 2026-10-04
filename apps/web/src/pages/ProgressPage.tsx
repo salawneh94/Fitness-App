@@ -241,7 +241,7 @@ function PhotosCard({
             <img src={urls[viewing]} alt="" className="w-full rounded-xl mb-3" />
             <div className="flex justify-between items-center">
               <span className="text-white text-sm">
-                {new Date(photos.find((p) => p.id === viewing)!.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                {parseISODate(photos.find((p) => p.id === viewing)!.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
               </span>
               <div className="flex gap-2">
                 <button onClick={() => handleRemove(viewing)} className="flex items-center gap-1 text-sm text-red-400 px-3 py-1.5 rounded-lg bg-white/10">

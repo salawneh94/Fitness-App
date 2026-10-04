@@ -75,16 +75,16 @@ export const useAppStore = create<AppState>()(
       progressPhotos: [],
       savedMeals: [],
 
+      // A weigh-in is recorded only for the first weight (onboarding) or one the user changed —
+      // saving a goal or unit change mustn't log a reading nobody took.
       setProfile: (profile) =>
-        set((state) => {
-          const alreadyLogged = state.weightHistory.some((w) => w.date === todayISO());
-          return {
-            profile,
-            weightHistory: alreadyLogged
-              ? state.weightHistory
-              : [...state.weightHistory, { date: todayISO(), weightKg: profile.weightKg }],
-          };
-        }),
+        set((state) => ({
+          profile,
+          weightHistory:
+            state.weightHistory.length === 0 || profile.weightKg !== state.profile?.weightKg
+              ? upsertByDate(state.weightHistory, { date: todayISO(), weightKg: profile.weightKg })
+              : state.weightHistory,
+        })),
 
       updateWeight: (weightKg) =>
         set((state) => ({
