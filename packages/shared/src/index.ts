@@ -18,3 +18,4 @@ export * from './planProgress';
 export * from './records';
 export * from './cardio';
 export * from './recap';
+export * from './forecast';

@@ -32,7 +32,9 @@ export default function NutritionScreen() {
   const restoreFoodEntry = useAppStore((s) => s.restoreFoodEntry);
   const [addingMeal, setAddingMeal] = useState<MealType | null>(null);
   const [editing, setEditing] = useState<FoodEntry | null>(null);
-  const [undo, setUndo] = useState<FoodEntry | null>(null);
+  // What the toast would put back: a logged food or a saved meal, whichever was deleted last.
+  const [undo, setUndo] = useState<{ id: string; message: string; restore: () => void } | null>(null);
+  const restoreSavedMeal = useAppStore((s) => s.restoreSavedMeal);
 
   // The day on screen. Everything here — totals, meals, water, adding — follows it, so a forgotten
   // dinner can be filled in the next morning. Forgotten days aren't only a gap in the diary: the
@@ -148,7 +150,10 @@ export default function NutritionScreen() {
           <MicronutrientList totals={microTotals} />
         </Card>
 
-        <SavedMealsSection date={day} />
+        <SavedMealsSection
+          date={day}
+          onRemoved={(meal) => setUndo({ id: meal.id, message: `Deleted ${meal.name}`, restore: () => restoreSavedMeal(meal) })}
+        />
 
         <View style={{ gap: 16 }}>
           {MEALS.map(({ key, label }) => {
@@ -199,7 +204,7 @@ export default function NutritionScreen() {
                           hapticStyle="warning"
                           onPress={() => {
                             removeFoodEntry(e.id);
-                            setUndo(e);
+                            setUndo({ id: e.id, message: `Removed ${e.name}`, restore: () => restoreFoodEntry(e) });
                           }}
                           className="p-1.5"
                         >
@@ -226,8 +231,8 @@ export default function NutritionScreen() {
       {undo && (
         <UndoToast
           key={undo.id}
-          message={`Removed ${undo.name}`}
-          onUndo={() => restoreFoodEntry(undo)}
+          message={undo.message}
+          onUndo={undo.restore}
           onDone={() => setUndo(null)}
         />
       )}

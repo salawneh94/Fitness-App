@@ -26,6 +26,7 @@ import InsightsCard from '@/components/insights-card';
 import CountUp from '@/components/ui/count-up';
 import RingGauge from '@/components/charts/ring-gauge';
 import WeightChart from '@/components/charts/weight-chart';
+import GoalForecastNote from '@/components/goal-forecast';
 import StrengthChart from '@/components/charts/strength-chart';
 import CalorieTrendChart from '@/components/charts/calorie-trend-chart';
 import MeasurementsCard from '@/components/measurements-card';
@@ -151,6 +152,7 @@ export default function ProgressScreen() {
 
         <Card title="Weight Trend">
           <WeightChart data={weightHistory} unit={profile.unitSystem} />
+          <GoalForecastNote profile={profile} />
         </Card>
 
         <WeeklyRecapSection />

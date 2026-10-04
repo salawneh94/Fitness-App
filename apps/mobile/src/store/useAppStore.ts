@@ -35,6 +35,16 @@ function upsertByDate<T extends { date: string }>(history: T[], entry: T): T[] {
   return next;
 }
 
+/**
+ * The most recent weigh-in by date, not the most recently typed. With backfilling, filling in last
+ * Tuesday must not make last Tuesday's weight the "current" one every target is computed from.
+ */
+function latestWeightKg(history: WeightEntry[]): number | undefined {
+  let latest: WeightEntry | undefined;
+  for (const w of history) if (!latest || w.date > latest.date) latest = w;
+  return latest?.weightKg;
+}
+
 /** The signed-in user's id, or null when signed out — every sync push is a no-op until then. */
 function currentUserId(): string | null {
   return useAuthStore.getState().session?.user.id ?? null;
@@ -63,9 +73,10 @@ interface AppState {
   recapSeenWeek: string | null;
 
   setProfile: (profile: Profile) => void;
-  updateWeight: (weightKg: number) => void;
-  updateSteps: (steps: number) => void;
-  updateSleep: (hours: number) => void;
+  /** Record a weigh-in (or steps, or sleep) for a day — today by default. */
+  updateWeight: (weightKg: number, date?: string) => void;
+  updateSteps: (steps: number, date?: string) => void;
+  updateSleep: (hours: number, date?: string) => void;
   /** Add to (or, with a negative amount, take back from) a day's water total — today by default. */
   addWater: (deltaMl: number, date?: string) => void;
   updateMeasurement: (fields: Omit<BodyMeasurementEntry, 'date'>) => void;
@@ -92,6 +103,8 @@ interface AppState {
 
   addSavedMeal: (name: string, items: SavedMealItem[]) => void;
   removeSavedMeal: (id: string) => void;
+  /** Put back a saved meal just deleted — same id, as with restoreFoodEntry. */
+  restoreSavedMeal: (meal: SavedMeal) => void;
   logSavedMeal: (mealTemplateId: string, targetMeal: MealType, date?: string) => void;
 
   startDeload: (deload: Omit<Deload, 'createdOn'>) => void;
@@ -176,33 +189,36 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      updateWeight: (weightKg) => {
-        set((state) => ({
-          weightHistory: upsertByDate(state.weightHistory, { date: todayISO(), weightKg }),
-          profile: state.profile ? { ...state.profile, weightKg } : state.profile,
-        }));
+      updateWeight: (weightKg, date = todayISO()) => {
+        set((state) => {
+          const weightHistory = upsertByDate(state.weightHistory, { date, weightKg });
+          return {
+            weightHistory,
+            profile: state.profile ? { ...state.profile, weightKg: latestWeightKg(weightHistory) ?? weightKg } : state.profile,
+          };
+        });
         const userId = currentUserId();
         if (userId) {
-          push.weight(userId, { date: todayISO(), weightKg });
+          push.weight(userId, { date, weightKg });
           const profile = get().profile;
           if (profile) push.profile(userId, profile);
         }
       },
 
-      updateSteps: (steps) => {
+      updateSteps: (steps, date = todayISO()) => {
         set((state) => ({
-          stepsHistory: upsertByDate(state.stepsHistory, { date: todayISO(), steps }),
+          stepsHistory: upsertByDate(state.stepsHistory, { date, steps }),
         }));
         const userId = currentUserId();
-        if (userId) push.steps(userId, { date: todayISO(), steps });
+        if (userId) push.steps(userId, { date, steps });
       },
 
-      updateSleep: (hours) => {
+      updateSleep: (hours, date = todayISO()) => {
         set((state) => ({
-          sleepHistory: upsertByDate(state.sleepHistory, { date: todayISO(), hours }),
+          sleepHistory: upsertByDate(state.sleepHistory, { date, hours }),
         }));
         const userId = currentUserId();
-        if (userId) push.sleep(userId, { date: todayISO(), hours });
+        if (userId) push.sleep(userId, { date, hours });
       },
 
       addWater: (deltaMl, date = todayISO()) => {
@@ -358,6 +374,14 @@ export const useAppStore = create<AppState>()(
       removeSavedMeal: (id) => {
         set((state) => ({ savedMeals: state.savedMeals.filter((m) => m.id !== id) }));
         if (currentUserId()) push.deleteSavedMeal(id);
+      },
+
+      restoreSavedMeal: (meal) => {
+        set((state) => ({
+          savedMeals: state.savedMeals.some((m) => m.id === meal.id) ? state.savedMeals : [...state.savedMeals, meal],
+        }));
+        const userId = currentUserId();
+        if (userId) push.savedMeal(userId, meal);
       },
 
       logSavedMeal: (mealTemplateId, targetMeal, date = todayISO()) => {

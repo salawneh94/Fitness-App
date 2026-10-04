@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus, Trash2, Utensils } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 import { useAppStore } from '@/store/useAppStore';
-import type { MealType } from '@fittrack/shared';
+import type { MealType, SavedMeal } from '@fittrack/shared';
 import { colors } from '@fittrack/shared';
 import Card from './ui/card';
 import SavedMealBuilderModal from './saved-meal-builder-modal';
@@ -15,7 +15,7 @@ const MEAL_CHIPS: { key: MealType; label: string }[] = [
   { key: 'snack', label: 'S' },
 ];
 
-export default function SavedMealsSection({ date }: { date?: string }) {
+export default function SavedMealsSection({ date, onRemoved }: { date?: string; onRemoved?: (meal: SavedMeal) => void }) {
   const savedMeals = useAppStore((s) => s.savedMeals);
   const removeSavedMeal = useAppStore((s) => s.removeSavedMeal);
   const logSavedMeal = useAppStore((s) => s.logSavedMeal);
@@ -71,7 +71,10 @@ export default function SavedMealsSection({ date }: { date?: string }) {
                       </Text>
                     </PressableScale>
                   ))}
-                  <PressableScale accessibilityLabel={`Delete ${meal.name}`} accessibilityRole="button" hapticStyle="warning" onPress={() => removeSavedMeal(meal.id)} className="p-1.5">
+                  <PressableScale accessibilityLabel={`Delete ${meal.name}`} accessibilityRole="button" hapticStyle="warning" onPress={() => {
+                      removeSavedMeal(meal.id);
+                      onRemoved?.(meal);
+                    }} className="p-1.5">
                     <Trash2 size={15} color={colors.textMuted} />
                   </PressableScale>
                 </View>
