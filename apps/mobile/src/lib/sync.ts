@@ -107,6 +107,12 @@ function pushWeight(userId: string, entry: WeightEntry) {
   });
 }
 
+/** Same key as the upsert, so deleting then re-adding a day (or undoing) collapses to the last op. RLS
+ * scopes the match to the signed-in user's rows. */
+function deleteWeight(date: string) {
+  enqueue({ key: `weight_entries:${date}`, table: 'weight_entries', op: 'delete', match: { date } });
+}
+
 function pushSteps(userId: string, entry: StepsEntry) {
   enqueue({
     key: `steps_entries:${entry.date}`,
@@ -325,6 +331,7 @@ export async function syncProgressPhotoFile(userId: string, photo: ProgressPhoto
 export const push = {
   profile: pushProfile,
   weight: pushWeight,
+  deleteWeight,
   steps: pushSteps,
   sleep: pushSleep,
   water: pushWater,

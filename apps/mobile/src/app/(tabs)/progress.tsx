@@ -27,6 +27,7 @@ import CountUp from '@/components/ui/count-up';
 import RingGauge from '@/components/charts/ring-gauge';
 import WeightChart from '@/components/charts/weight-chart';
 import GoalForecastNote from '@/components/goal-forecast';
+import WeightHistoryModal from '@/components/weight-history-modal';
 import StrengthChart from '@/components/charts/strength-chart';
 import CalorieTrendChart from '@/components/charts/calorie-trend-chart';
 import MeasurementsCard from '@/components/measurements-card';
@@ -65,6 +66,7 @@ export default function ProgressScreen() {
   }, [workoutLogs]);
 
   const [selectedExercise, setSelectedExercise] = useState<string>('');
+  const [showWeighIns, setShowWeighIns] = useState(false);
   const activeExercise = selectedExercise || exerciseOptions[0]?.id || '';
 
   const strengthData = useMemo(() => {
@@ -150,7 +152,18 @@ export default function ProgressScreen() {
           <CalorieTrendChart foodEntries={foodEntries} targetCalories={targets.calories} />
         </Card>
 
-        <Card title="Weight Trend">
+        <Card
+          title="Weight Trend"
+          action={
+            weightHistory.length > 0 ? (
+              <PressableScale accessibilityRole="button" accessibilityLabel="All weigh-ins" onPress={() => setShowWeighIns(true)}>
+                <Text className="text-sm font-medium" style={{ color: colors.brandPrimary }}>
+                  All weigh-ins
+                </Text>
+              </PressableScale>
+            ) : undefined
+          }
+        >
           <WeightChart data={weightHistory} unit={profile.unitSystem} />
           <GoalForecastNote profile={profile} />
         </Card>
@@ -196,6 +209,7 @@ export default function ProgressScreen() {
         <PhotosCard photos={progressPhotos} onAdd={addProgressPhoto} onRemove={removeProgressPhoto} />
         <PhotoCompareSlider photos={progressPhotos} />
       </ScrollView>
+      {showWeighIns && <WeightHistoryModal onClose={() => setShowWeighIns(false)} />}
     </SafeAreaView>
   );
 }

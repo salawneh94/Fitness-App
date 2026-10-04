@@ -19,3 +19,4 @@ export * from './records';
 export * from './cardio';
 export * from './recap';
 export * from './forecast';
+export * from './entryChecks';

@@ -75,6 +75,8 @@ interface AppState {
   setProfile: (profile: Profile) => void;
   /** Record a weigh-in (or steps, or sleep) for a day — today by default. */
   updateWeight: (weightKg: number, date?: string) => void;
+  /** Remove a day's weigh-in — a typo, or a reading taken with clothes and shoes on. */
+  removeWeight: (date: string) => void;
   updateSteps: (steps: number, date?: string) => void;
   updateSleep: (hours: number, date?: string) => void;
   /** Add to (or, with a negative amount, take back from) a day's water total — today by default. */
@@ -200,6 +202,25 @@ export const useAppStore = create<AppState>()(
         const userId = currentUserId();
         if (userId) {
           push.weight(userId, { date, weightKg });
+          const profile = get().profile;
+          if (profile) push.profile(userId, profile);
+        }
+      },
+
+      removeWeight: (date) => {
+        set((state) => {
+          const weightHistory = state.weightHistory.filter((w) => w.date !== date);
+          // The current weight falls back to the latest reading that's left. With none left it
+          // stays as it was — a profile always has a weight, and onboarding's is better than none.
+          const latest = latestWeightKg(weightHistory);
+          return {
+            weightHistory,
+            profile: state.profile && latest !== undefined ? { ...state.profile, weightKg: latest } : state.profile,
+          };
+        });
+        const userId = currentUserId();
+        if (userId) {
+          push.deleteWeight(date);
           const profile = get().profile;
           if (profile) push.profile(userId, profile);
         }

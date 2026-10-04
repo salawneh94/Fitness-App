@@ -8,7 +8,7 @@ import { useSyncQueue } from '@/lib/sync-queue';
 import { supabase } from '@/lib/supabase';
 import { shareExport } from '@/lib/export-data';
 import type { ActivityLevel, Goal, Profile, Sex, UnitSystem } from '@fittrack/shared';
-import { ACTIVITY_LABELS, GOAL_LABELS, bmi, planDailyTargets, colors } from '@fittrack/shared';
+import { ACTIVITY_LABELS, GOAL_LABELS, WEIGHT_RANGE_KG, bmi, planDailyTargets, colors } from '@fittrack/shared';
 import Card from './ui/card';
 import TargetPlanNote from './target-plan-note';
 import WeightInput from './ui/weight-input';
@@ -104,6 +104,13 @@ export default function EditProfileForm() {
   function submit() {
     if (!form.name.trim()) {
       Alert.alert('Name required', 'Please enter your name.');
+      return;
+    }
+    // Saved weight becomes today's weigh-in and drives every target, so a typo here is as costly as
+    // one in the daily log. Same bounds as onboarding.
+    const outOfRange = (kg: number) => !(kg >= WEIGHT_RANGE_KG.min && kg <= WEIGHT_RANGE_KG.max);
+    if (outOfRange(Number(form.weightKg)) || outOfRange(Number(form.targetWeightKg))) {
+      Alert.alert('Check your weight', 'Current and target weight should both be realistic bodyweights.');
       return;
     }
     const profile: Profile = {
