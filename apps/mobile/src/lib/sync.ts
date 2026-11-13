@@ -402,6 +402,41 @@ function applyDelta<T>(table: SyncTable, keyOf: (item: T) => string, incoming: T
   return [...byKey.values()];
 }
 
+/** Rows asked for per request. Hosted Supabase serves at most 1,000 however many are requested. */
+const PULL_PAGE_SIZE = 1000;
+
+/**
+ * Every row of a user's table (or every row changed since `watermark`), fetched in pages.
+ *
+ * One `select('*')` is not the whole table: the API caps a response — at 1,000 rows on hosted
+ * Supabase — and returns the first thousand with no error. A full pull then treated that as the
+ * complete set and pruned the device down to it, so anyone with more than a few months of meals
+ * lost the rest of their history from the phone on the next cold start.
+ *
+ * The exact count comes back with the first page, so the loop knows when it has everything
+ * without assuming the server's cap equals the page size. Ordered by id: paging needs a stable
+ * order, or a row can appear on two pages and another on none. Any page failing fails the lot —
+ * a partial table must never be mistaken for a full one, which is the whole bug.
+ */
+async function fetchAllRows(
+  table: string,
+  userId: string,
+  watermark: string | null
+): Promise<{ data: Record<string, any>[] | null; error: unknown }> {
+  const rows: Record<string, any>[] = [];
+  let total: number | null = null;
+  for (;;) {
+    let query = supabase.from(table).select('*', { count: 'exact' }).eq('user_id', userId);
+    if (watermark) query = query.gt('updated_at', watermark);
+    const { data, error, count } = await query.order('id').range(rows.length, rows.length + PULL_PAGE_SIZE - 1);
+    if (error) return { data: null, error };
+    rows.push(...(data ?? []));
+    if (typeof count === 'number') total = count;
+    // Done when the count says so; without a count, when a page comes back empty.
+    if (!data || data.length === 0 || (total !== null && rows.length >= total)) return { data: rows, error: null };
+  }
+}
+
 /**
  * Syncs remote data into the local store.
  *
@@ -417,10 +452,7 @@ function applyDelta<T>(table: SyncTable, keyOf: (item: T) => string, incoming: T
 export async function pullRemote(userId: string, { full = false }: { full?: boolean } = {}): Promise<void> {
   const watermark = full ? null : await readWatermark(userId);
 
-  const scoped = (table: string) => {
-    const query = supabase.from(table).select('*').eq('user_id', userId);
-    return watermark ? query.gt('updated_at', watermark) : query;
-  };
+  const scoped = (table: string) => fetchAllRows(table, userId, watermark);
 
   const profileQuery = supabase.from('profiles').select('*').eq('id', userId);
 

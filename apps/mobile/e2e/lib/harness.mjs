@@ -135,7 +135,12 @@ export function createBackend({ users = [{ id: UID, email: 's@example.com', pass
       const offset = Number(url.searchParams.get('offset') ?? 0);
       const limit = Math.min(Number(url.searchParams.get('limit') ?? Infinity), backend.maxRows);
       backend.reads.push({ table, offset, limit, total: rows.length });
-      return json(route, 200, rows.slice(offset, offset + limit));
+      const page = rows.slice(offset, offset + limit);
+      // With Prefer: count=exact, PostgREST reports the full match count alongside the page.
+      const headers = /count=exact/.test(req.headers().prefer ?? '')
+        ? { 'content-range': `${page.length ? `${offset}-${offset + page.length - 1}` : '*'}/${rows.length}`, 'access-control-expose-headers': 'content-range' }
+        : {};
+      return route.fulfill({ status: 200, contentType: 'application/json', headers, body: JSON.stringify(page) });
     }
 
     const map = (backend.tables[table] ??= new Map());
