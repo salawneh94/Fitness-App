@@ -1,7 +1,8 @@
 import { CloudOff, RefreshCw, TriangleAlert } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 import { colors } from '@fittrack/shared';
-import { SYNC_FAILURE_THRESHOLD, useSyncQueue } from '@/lib/sync-queue';
+import { SYNC_FAILURE_THRESHOLD, countMine, useSyncQueue } from '@/lib/sync-queue';
+import { useAuthStore } from '@/store/useAuthStore';
 import PressableScale from '@/components/ui/pressable-scale';
 
 function relativeTime(iso: string): string {
@@ -24,10 +25,38 @@ function relativeTime(iso: string): string {
  * genuinely something to say.
  */
 export default function SyncStatusBanner() {
-  const pending = useSyncQueue((s) => s.pendingOps.length);
+  const userId = useAuthStore((s) => s.session?.user.id ?? null);
+  const pending = useSyncQueue((s) => countMine(s.pendingOps, userId));
+  const rejected = useSyncQueue((s) => countMine(s.rejectedOps, userId));
   const failures = useSyncQueue((s) => s.consecutiveFailures);
   const online = useSyncQueue((s) => s.online);
   const flush = useSyncQueue((s) => s.flush);
+  const retryRejected = useSyncQueue((s) => s.retryRejected);
+
+  // A write the server refused is the one case where waiting won't help, so it's said outright
+  // rather than folded into "not syncing": everything else did sync, this didn't, and it's safe.
+  if (rejected > 0) {
+    return (
+      <View
+        className="flex-row items-start gap-3 p-4 rounded-2xl border"
+        style={{ backgroundColor: 'rgba(251,191,36,0.10)', borderColor: colors.statusWarning }}
+      >
+        <TriangleAlert size={18} color={colors.statusWarning} style={{ marginTop: 2 }} />
+        <View className="flex-1">
+          <Text className="text-sm font-medium" style={{ color: colors.textPrimary }}>
+            {rejected} {rejected === 1 ? 'change wasn’t' : 'changes weren’t'} accepted by the server
+          </Text>
+          <Text className="text-xs mt-0.5" style={{ color: colors.textSecondary }}>
+            {rejected === 1 ? 'It’s' : 'They’re'} kept on this device and will be tried again each time the app starts. Everything else is
+            syncing normally.
+          </Text>
+        </View>
+        <PressableScale onPress={() => void retryRejected()} hapticStyle="selection" className="p-1" accessibilityLabel="Try refused changes again">
+          <RefreshCw size={16} color={colors.statusWarning} />
+        </PressableScale>
+      </View>
+    );
+  }
 
   // Nothing queued means nothing to warn about, even while offline — an offline app with all
   // its writes already pushed is in a perfectly good state and saying so is just noise.
@@ -72,12 +101,15 @@ export default function SyncStatusBanner() {
 
 /** The always-visible counterpart, for the Profile screen: says where things stand either way. */
 export function SyncStatusLine() {
-  const pending = useSyncQueue((s) => s.pendingOps.length);
+  const userId = useAuthStore((s) => s.session?.user.id ?? null);
+  const pending = useSyncQueue((s) => countMine(s.pendingOps, userId));
+  const rejected = useSyncQueue((s) => countMine(s.rejectedOps, userId));
+  const rejectedReason = useSyncQueue((s) => s.rejectedOps.find((o) => !o.userId || o.userId === userId)?.error);
   const lastSyncedAt = useSyncQueue((s) => s.lastSyncedAt);
   const lastError = useSyncQueue((s) => s.lastError);
   const failures = useSyncQueue((s) => s.consecutiveFailures);
 
-  const synced = pending === 0;
+  const synced = pending === 0 && rejected === 0;
   return (
     <View>
       <Text className="text-sm" style={{ color: colors.textSecondary }}>
@@ -85,8 +117,16 @@ export function SyncStatusLine() {
           ? lastSyncedAt
             ? `All changes synced · ${relativeTime(lastSyncedAt)}`
             : 'All changes synced'
-          : `${pending} ${pending === 1 ? 'change' : 'changes'} waiting to sync`}
+          : pending > 0
+            ? `${pending} ${pending === 1 ? 'change' : 'changes'} waiting to sync`
+            : 'Everything else is synced'}
       </Text>
+      {rejected > 0 && (
+        <Text className="text-xs mt-1" style={{ color: colors.statusWarning }}>
+          {rejected} {rejected === 1 ? 'change wasn’t' : 'changes weren’t'} accepted by the server
+          {rejectedReason ? `: ${rejectedReason}` : ''}. Kept on this device.
+        </Text>
+      )}
       {failures >= SYNC_FAILURE_THRESHOLD && lastError && (
         <Text className="text-xs mt-1" style={{ color: colors.statusCritical }}>
           Last error: {lastError}

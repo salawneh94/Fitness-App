@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { supabase } from './supabase';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export type SyncTable =
   | 'profiles'
@@ -46,10 +47,54 @@ export interface SyncOp {
   row?: Record<string, unknown>;
   /** The row id/match column(s) to delete by, only present for 'delete'. */
   match?: Record<string, unknown>;
+  /**
+   * Whose write this is. A queue outlives a sign-out (it has to: writes made offline must survive
+   * until they can be sent), so on a shared phone it can hold one person's writes while another is
+   * signed in. Sending those under the wrong session gets them refused; they wait for their owner.
+   * Absent only on ops queued before this field existed, which are treated as the current user's.
+   */
+  userId?: string;
+}
+
+/** A write the server refused outright, kept rather than discarded. */
+export interface RejectedOp extends SyncOp {
+  /** What the server said. */
+  error: string;
+  rejectedAt: string;
+}
+
+/**
+ * Is this failure one that trying again could fix?
+ *
+ * No response at all (offline, DNS, a timeout) and the statuses that mean "not now" — an expired
+ * session, rate limiting, a server having a bad minute — are worth retrying. Everything else in
+ * the 4xx range is the server understanding the request and saying no: a constraint, a policy, a
+ * column or table that isn't there. That answer won't change by asking again, so retrying it at
+ * the head of an ordered queue is how one bad row used to block every write behind it for good.
+ */
+export function isRetryable(status: number | undefined): boolean {
+  if (!status) return true;
+  if (status === 401 || status === 408 || status === 425 || status === 429) return true;
+  return status >= 500;
+}
+
+const mine = (op: SyncOp, userId: string | null) => !op.userId || op.userId === userId;
+const currentUserId = () => useAuthStore.getState().session?.user.id ?? null;
+
+/** How many of these writes belong to the signed-in user — what the status UI should count. */
+export function countMine(ops: SyncOp[], userId: string | null): number {
+  return ops.filter((o) => mine(o, userId)).length;
 }
 
 interface SyncQueueState {
   pendingOps: SyncOp[];
+  /**
+   * Writes the server refused. They no longer block the queue, but they're the user's data, so
+   * they aren't thrown away: each is offered to the server again once per app start (the usual
+   * cause — a missing migration, a policy bug — gets fixed server-side), and a newer write to the
+   * same row replaces it.
+   */
+  rejectedOps: RejectedOp[];
   /** ISO timestamp of the last flush that left the queue empty — i.e. everything local reached
    * the server. Null until that has happened at least once on this device. */
   lastSyncedAt: string | null;
@@ -63,6 +108,8 @@ interface SyncQueueState {
   online: boolean;
   enqueue: (op: SyncOp) => void;
   flush: () => Promise<void>;
+  /** Put the refused writes back in the queue and try them again now. */
+  retryRejected: () => Promise<void>;
   /** Drops every pending op without pushing it — e.g. after the account they'd sync to no longer
    * exists, where flushing would just retry against rows that were already cascade-deleted. */
   clear: () => void;
@@ -72,6 +119,8 @@ interface SyncQueueState {
 export const SYNC_FAILURE_THRESHOLD = 3;
 
 let flushing = false;
+/** Refused writes get one automatic second chance per app start, on its first flush. */
+let offeredRejectedThisSession = false;
 
 /**
  * Resolves to `fallback` if `promise` hasn't settled in `ms`.
@@ -107,16 +156,29 @@ export const useSyncQueue = create<SyncQueueState>()(
   persist(
     (set, get) => ({
       pendingOps: [],
+      rejectedOps: [],
       lastSyncedAt: null,
       consecutiveFailures: 0,
       lastError: null,
       online: true,
 
       enqueue: (op) => {
+        const owned = { ...op, userId: op.userId ?? currentUserId() ?? undefined };
+        // Same row, same owner: the newer write replaces the older, queued or refused alike.
+        const sameRow = (existing: SyncOp) => existing.key === owned.key && (existing.userId ?? owned.userId) === owned.userId;
         set((state) => ({
-          pendingOps: [...state.pendingOps.filter((existing) => existing.key !== op.key), op],
+          pendingOps: [...state.pendingOps.filter((existing) => !sameRow(existing)), owned],
+          rejectedOps: state.rejectedOps.filter((existing) => !sameRow(existing)),
         }));
         void get().flush();
+      },
+
+      retryRejected: async () => {
+        set((state) => ({
+          pendingOps: [...state.pendingOps, ...state.rejectedOps.map(({ error: _error, rejectedAt: _rejectedAt, ...op }) => op)],
+          rejectedOps: [],
+        }));
+        await get().flush();
       },
 
       flush: async () => {
@@ -133,32 +195,63 @@ export const useSyncQueue = create<SyncQueueState>()(
           // it must not count toward the "something is wrong" threshold.
           if (net.isConnected === false) return;
 
-          // Process a snapshot in order; stop at the first failure so ordering is preserved
-          // for the next attempt (a later op for the same key already replaced any earlier one).
-          const ops = get().pendingOps;
-          for (const currentOp of ops) {
-            const stillQueued = get().pendingOps.find((o) => o.key === currentOp.key);
-            if (!stillQueued) continue; // superseded or already flushed
+          // Writes are sent as whoever is signed in, so with nobody signed in there is nothing
+          // that can be sent — and anything queued by someone else waits for them.
+          const userId = currentUserId();
+          if (!userId) return;
+
+          if (!offeredRejectedThisSession) {
+            offeredRejectedThisSession = true;
+            const again = get().rejectedOps.filter((o) => mine(o, userId));
+            if (again.length > 0) {
+              set((state) => ({
+                pendingOps: [...state.pendingOps, ...again.map(({ error: _error, rejectedAt: _rejectedAt, ...op }) => op)],
+                rejectedOps: state.rejectedOps.filter((o) => !mine(o, userId)),
+              }));
+            }
+          }
+
+          // Send in order, always taking the next write from the live queue rather than from a
+          // snapshot: a write queued while a request is in flight (a second tap on the water
+          // button, an edit straight after a save) is picked up by this same pass. Stop at the
+          // first failure that might pass later, so ordering is preserved for the next attempt.
+          const attempted = new Set<SyncOp>();
+          for (;;) {
+            const stillQueued = get().pendingOps.find((o) => mine(o, userId) && !attempted.has(o));
+            if (!stillQueued) break;
+            attempted.add(stillQueued);
 
             // A request that throws (rather than resolving with an error) has to count as a
             // failure too, or the whole class of DNS/TLS/unexpected exceptions escapes flush()
             // without ever incrementing the counter — invisible again, which is the bug this
             // status work exists to remove.
-            const { error } = await withTimeout(
+            const { error, status } = await withTimeout(
               (stillQueued.op === 'upsert'
                 ? supabase
                     .from(stillQueued.table)
                     .upsert(stillQueued.row!, { onConflict: CONFLICT_TARGET[stillQueued.table] })
                 : supabase.from(stillQueued.table).delete().match(stillQueued.match!)
               ).then(
-                (result) => ({ error: result.error as { message: string } | null }),
+                (result) => ({ error: result.error as { message: string } | null, status: result.status as number | undefined }),
                 (thrown: unknown) => ({
                   error: { message: thrown instanceof Error ? thrown.message : String(thrown) },
+                  status: undefined as number | undefined,
                 })
               ),
               REQUEST_TIMEOUT_MS,
-              { error: { message: 'Request timed out' } }
+              { error: { message: 'Request timed out' }, status: undefined }
             );
+
+            if (error && !isRetryable(status)) {
+              // The server said no and will keep saying no. Set this write aside and carry on:
+              // it must not cost the user every write queued behind it.
+              set((state) => ({
+                pendingOps: state.pendingOps.filter((o) => o !== stillQueued),
+                rejectedOps: [...state.rejectedOps, { ...stillQueued, error: error.message, rejectedAt: new Date().toISOString() }],
+                lastError: error.message,
+              }));
+              continue;
+            }
 
             if (error) {
               // Network/server issue — leave this op and the rest queued and retry later, but
@@ -170,28 +263,34 @@ export const useSyncQueue = create<SyncQueueState>()(
               return;
             }
 
+            // Remove exactly the write that was sent, by identity. Removing "whatever is queued
+            // for this row" also threw away a newer write for the same row that arrived while
+            // this one was in flight — leaving the server on the older value with nothing left
+            // queued to correct it.
             set((state) => ({
-              pendingOps: state.pendingOps.filter((o) => o.key !== stillQueued.key),
+              pendingOps: state.pendingOps.filter((o) => o !== stillQueued),
               consecutiveFailures: 0,
               lastError: null,
             }));
           }
 
-          // Only claim a sync once the queue actually drained — a partial flush is not "synced".
-          if (get().pendingOps.length === 0) set({ lastSyncedAt: new Date().toISOString() });
+          // Only claim a sync once everything of this user's actually reached the server — a
+          // partial flush is not "synced", and neither is one that left a write refused.
+          const { pendingOps, rejectedOps } = get();
+          if (![...pendingOps, ...rejectedOps].some((o) => mine(o, userId))) set({ lastSyncedAt: new Date().toISOString() });
         } finally {
           flushing = false;
         }
       },
 
-      clear: () => set({ pendingOps: [], consecutiveFailures: 0, lastError: null }),
+      clear: () => set({ pendingOps: [], rejectedOps: [], consecutiveFailures: 0, lastError: null }),
     }),
     {
       name: 'fitness-app-sync-queue',
       storage: createJSONStorage(() => AsyncStorage),
       // Failure counters and connectivity describe this run, not durable state — a restart
       // should re-derive them rather than resurrect a stale warning.
-      partialize: (state) => ({ pendingOps: state.pendingOps, lastSyncedAt: state.lastSyncedAt }),
+      partialize: (state) => ({ pendingOps: state.pendingOps, rejectedOps: state.rejectedOps, lastSyncedAt: state.lastSyncedAt }),
     }
   )
 );

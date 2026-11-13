@@ -20,7 +20,10 @@ import { useAppStore } from '@/store/useAppStore';
 function pendingKeysForTable(table: SyncTable, op?: SyncOp['op']): Set<string> {
   const prefix = `${table}:`;
   const keys = new Set<string>();
-  for (const pending of useSyncQueue.getState().pendingOps) {
+  // Refused writes count too: the server doesn't have the row, but it's still the user's data, and a
+  // pull that "adopts the server's version" must not be what deletes it from the phone.
+  const { pendingOps, rejectedOps } = useSyncQueue.getState();
+  for (const pending of [...pendingOps, ...rejectedOps]) {
     if (pending.table !== table || (op && pending.op !== op)) continue;
     if (pending.key.startsWith(prefix)) keys.add(pending.key.slice(prefix.length));
   }

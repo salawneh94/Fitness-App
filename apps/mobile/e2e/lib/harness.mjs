@@ -82,6 +82,8 @@ export function createBackend({ users = [{ id: UID, email: 's@example.com', pass
     offline: false,
     /** (table, row, method) => { status, code, message } to refuse a write; null to accept it. */
     rejectWrite: null,
+    /** Hold each write this long before answering, to open the window a slow network would. */
+    writeDelayMs: 0,
     /** Every write that arrived, accepted or not. */
     writes: [],
     /** Recovery codes issued by "forgot password": email -> code. */
@@ -144,6 +146,7 @@ export function createBackend({ users = [{ id: UID, email: 's@example.com', pass
     }
 
     const map = (backend.tables[table] ??= new Map());
+    if (backend.writeDelayMs) await new Promise((r) => setTimeout(r, backend.writeDelayMs));
     if (req.method() === 'POST') {
       for (const incoming of [req.postDataJSON()].flat()) {
         const refusal =
