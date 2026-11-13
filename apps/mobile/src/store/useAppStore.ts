@@ -23,7 +23,7 @@ import {
   type WorkoutLogEntry,
   type WorkoutPlanTemplate,
 } from '@fittrack/shared';
-import { useAuthStore } from './useAuthStore';
+import { onSignOut, useAuthStore } from './useAuthStore';
 import { push } from '@/lib/sync';
 import { buildScheduledWorkouts } from '@/lib/apply-plan';
 
@@ -51,6 +51,13 @@ function currentUserId(): string | null {
 }
 
 interface AppState {
+  /**
+   * Whose data this is. Everything below is one account's, held on a device that more than one
+   * person may sign in to; without a name on it, the next person to sign in was shown the last
+   * person's profile and history until their own finished downloading — or indefinitely, offline.
+   * Null only for data saved before this field existed, which the next sign-in adopts.
+   */
+  ownerId: string | null;
   profile: Profile | null;
   weightHistory: WeightEntry[];
   stepsHistory: StepsEntry[];
@@ -72,6 +79,8 @@ interface AppState {
   /** Monday of the last weekly recap the user closed on Overview — so it shows once, not daily. */
   recapSeenWeek: string | null;
 
+  /** Make this store `userId`'s: a no-op if it already is, a wipe first if it was someone else's. */
+  adoptOwner: (userId: string) => void;
   setProfile: (profile: Profile) => void;
   /** Record a weigh-in (or steps, or sleep) for a day — today by default. */
   updateWeight: (weightKg: number, date?: string) => void;
@@ -123,6 +132,7 @@ interface AppState {
 
 function emptyState(): Pick<
   AppState,
+  | 'ownerId'
   | 'profile'
   | 'weightHistory'
   | 'stepsHistory'
@@ -139,6 +149,7 @@ function emptyState(): Pick<
   | 'recapSeenWeek'
 > {
   return {
+    ownerId: null,
     profile: null,
     weightHistory: [],
     stepsHistory: [],
@@ -169,6 +180,12 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       ...emptyState(),
+
+      adoptOwner: (userId) => {
+        const { ownerId } = get();
+        if (ownerId === userId) return;
+        set(ownerId === null ? { ownerId: userId } : { ...emptyState(), ownerId: userId });
+      },
 
       setProfile: (profile) => {
         // A weigh-in is recorded only when there's a weight to record: the first one, at
@@ -454,3 +471,8 @@ export const useAppStore = create<AppState>()(
     }
   )
 );
+
+// Signing out takes the account's data off the device. Nothing is lost by it: whatever hadn't
+// reached the server yet is still in the sync queue under its owner, and the rest comes back with
+// the full pull at the next sign-in.
+onSignOut('after', () => useAppStore.getState().resetLocalData());

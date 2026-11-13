@@ -13,7 +13,7 @@ import type {
 } from '@fittrack/shared';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
-import { useSyncQueue, type SyncOp, type SyncTable } from './sync-queue';
+import { unsentOps, useSyncQueue, type SyncOp, type SyncTable } from './sync-queue';
 import { deletePhotoFromStorage, downloadPhotoFromStorage, hasPhotoFile, uploadPhotoToStorage } from './photo-store';
 import { useAppStore } from '@/store/useAppStore';
 
@@ -21,9 +21,10 @@ function pendingKeysForTable(table: SyncTable, op?: SyncOp['op']): Set<string> {
   const prefix = `${table}:`;
   const keys = new Set<string>();
   // Refused writes count too: the server doesn't have the row, but it's still the user's data, and a
-  // pull that "adopts the server's version" must not be what deletes it from the phone.
-  const { pendingOps, rejectedOps } = useSyncQueue.getState();
-  for (const pending of [...pendingOps, ...rejectedOps]) {
+  // pull that "adopts the server's version" must not be what deletes it from the phone. Only this
+  // user's, though — someone else's write waiting in the queue for "today's steps" says nothing
+  // about whether *this* account's row for today is up to date.
+  for (const pending of unsentOps()) {
     if (pending.table !== table || (op && pending.op !== op)) continue;
     if (pending.key.startsWith(prefix)) keys.add(pending.key.slice(prefix.length));
   }
@@ -452,7 +453,7 @@ async function fetchAllRows(
  *
  * Either way a row this device hasn't finished pushing is never overwritten.
  */
-export async function pullRemote(userId: string, { full = false }: { full?: boolean } = {}): Promise<void> {
+export async function pullRemote(userId: string, { full = false }: { full?: boolean } = {}): Promise<{ profileKnown: boolean }> {
   const watermark = full ? null : await readWatermark(userId);
 
   const scoped = (table: string) => fetchAllRows(table, userId, watermark);
@@ -475,6 +476,9 @@ export async function pullRemote(userId: string, { full = false }: { full?: bool
     ]);
 
   const current = useAppStore.getState();
+  // The account changed while this was in flight (signed out, or someone else signed in): these rows
+  // belong to a store that has moved on, so they are dropped rather than written into it.
+  if (current.ownerId !== null && current.ownerId !== userId) return { profileKnown: false };
   const hasPendingProfile = pendingKeysForTable('profiles').has(userId);
   // On a delta pull an absent profile means "unchanged", not "no profile" — only a *successful*
   // full pull can conclude the latter. A failed one concludes nothing: postgrest resolves a
@@ -550,4 +554,8 @@ export async function pullRemote(userId: string, { full = false }: { full?: bool
       void downloadPhotoFromStorage(userId, row.id).catch(() => {});
     }
   }
+
+  // Whether the server actually answered "is there a profile?" — the caller needs to tell a new
+  // account (answered: none) from a failed request (not answered), which look the same in the store.
+  return { profileKnown: !profileRes.error };
 }

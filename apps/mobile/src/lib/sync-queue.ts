@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { supabase } from './supabase';
-import { useAuthStore } from '@/store/useAuthStore';
+import { onSignOut, useAuthStore } from '@/store/useAuthStore';
 
 export type SyncTable =
   | 'profiles'
@@ -80,6 +80,13 @@ export function isRetryable(status: number | undefined): boolean {
 
 const mine = (op: SyncOp, userId: string | null) => !op.userId || op.userId === userId;
 const currentUserId = () => useAuthStore.getState().session?.user.id ?? null;
+
+/** The signed-in user's unsent writes, queued and refused alike — never another account's. */
+export function unsentOps(): SyncOp[] {
+  const userId = currentUserId();
+  const { pendingOps, rejectedOps } = useSyncQueue.getState();
+  return [...pendingOps, ...rejectedOps].filter((o) => mine(o, userId));
+}
 
 /** How many of these writes belong to the signed-in user — what the status UI should count. */
 export function countMine(ops: SyncOp[], userId: string | null): number {
@@ -294,6 +301,12 @@ export const useSyncQueue = create<SyncQueueState>()(
     }
   )
 );
+
+// A last attempt to send what's queued while the session that owns it still exists. Bounded: with
+// no connection this must not hold the sign-out up. Whatever doesn't make it stays queued under
+// its owner and goes out the next time they sign in on this device.
+const SIGN_OUT_FLUSH_MS = 4_000;
+onSignOut('before', () => withTimeout(useSyncQueue.getState().flush(), SIGN_OUT_FLUSH_MS, undefined));
 
 NetInfo.addEventListener((state) => {
   useSyncQueue.setState({ online: state.isConnected !== false });

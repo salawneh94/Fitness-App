@@ -82,6 +82,8 @@ export function createBackend({ users = [{ id: UID, email: 's@example.com', pass
     offline: false,
     /** (table, row, method) => { status, code, message } to refuse a write; null to accept it. */
     rejectWrite: null,
+    /** Hold each read this long before answering — a slow first sync. */
+    readDelayMs: 0,
     /** Hold each write this long before answering, to open the window a slow network would. */
     writeDelayMs: 0,
     /** Every write that arrived, accepted or not. */
@@ -128,6 +130,7 @@ export function createBackend({ users = [{ id: UID, email: 's@example.com', pass
       });
 
     if (req.method() === 'GET') {
+      if (backend.readDelayMs) await new Promise((r) => setTimeout(r, backend.readDelayMs));
       let rows = backend.rows(table).filter(matches);
       const order = url.searchParams.get('order');
       if (order) {
@@ -247,7 +250,7 @@ export const closeBrowser = () => browser?.close();
  * `user` is who is already signed in (their session is planted before the app boots); pass null to
  * start at the sign-in screen. Returns the page plus readers for what the app has persisted.
  */
-export async function openApp({ backend = createBackend(), user = backend.users[0], errors = [], context } = {}) {
+export async function openApp({ backend = createBackend(), user = backend.users[0], errors = [], context, wait = true } = {}) {
   const ctx = context ?? (await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 }));
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
@@ -282,6 +285,7 @@ export async function openApp({ backend = createBackend(), user = backend.users[
     },
     close: () => (context ? page.close() : ctx.close()),
   };
-  await app.settle(1200);
+  // `wait: false` hands the page back while the first sync is still in flight.
+  if (wait) await app.settle(1200);
   return app;
 }

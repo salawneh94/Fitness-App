@@ -41,6 +41,7 @@ export default function EditProfileForm() {
   const resetLocalData = useAppStore((s) => s.resetLocalData);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
 
   async function handleExport() {
     setExporting(true);
@@ -316,21 +317,48 @@ export default function EditProfileForm() {
               </Text>
             </PressableScale>
 
-            <PressableScale
-              onPress={() =>
-                Alert.alert('Sign out', 'You can sign back in any time to pick up where you left off.', [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
-                ])
-              }
-              className="flex-row items-center justify-center gap-2 py-2.5 rounded-lg border"
-              style={{ borderColor: colors.gridline }}
-            >
-              <LogOut size={15} color={colors.statusCritical} />
-              <Text className="text-sm font-medium" style={{ color: colors.statusCritical }}>
-                Sign out
-              </Text>
-            </PressableScale>
+            {confirmingSignOut ? (
+              // Asked in place rather than in a system alert: an alert with buttons does nothing on
+              // web, and this way the question sits next to the button that raised it.
+              <View className="rounded-lg border p-3" style={{ borderColor: colors.gridline }}>
+                <Text className="text-sm mb-3" style={{ color: colors.textSecondary }}>
+                  Sign out of this device? Your data stays in your account — sign back in any time to pick up where you left off.
+                </Text>
+                <View className="flex-row gap-2">
+                  <PressableScale
+                    accessibilityRole="button"
+                    onPress={() => setConfirmingSignOut(false)}
+                    className="flex-1 items-center py-2.5 rounded-lg border"
+                    style={{ borderColor: colors.gridline }}
+                  >
+                    <Text className="text-sm font-medium" style={{ color: colors.textPrimary }}>
+                      Cancel
+                    </Text>
+                  </PressableScale>
+                  <PressableScale
+                    accessibilityRole="button"
+                    hapticStyle="warning"
+                    onPress={() => void signOut()}
+                    className="flex-1 items-center py-2.5 rounded-lg"
+                    style={{ backgroundColor: colors.statusCritical }}
+                  >
+                    <Text className="text-white text-sm font-semibold">Yes, sign out</Text>
+                  </PressableScale>
+                </View>
+              </View>
+            ) : (
+              <PressableScale
+                accessibilityRole="button"
+                onPress={() => setConfirmingSignOut(true)}
+                className="flex-row items-center justify-center gap-2 py-2.5 rounded-lg border"
+                style={{ borderColor: colors.gridline }}
+              >
+                <LogOut size={15} color={colors.statusCritical} />
+                <Text className="text-sm font-medium" style={{ color: colors.statusCritical }}>
+                  Sign out
+                </Text>
+              </PressableScale>
+            )}
 
             <PressableScale hapticStyle="warning"
               onPress={confirmDeleteAccount}
