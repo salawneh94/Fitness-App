@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { create } from 'zustand';
 import Purchases, { type CustomerInfo, type PurchasesOffering, type PurchasesPackage } from 'react-native-purchases';
 import { configureRevenueCat, ENTITLEMENT_ID, isRevenueCatConfigured } from '@/lib/revenuecat';
@@ -13,6 +14,14 @@ interface EntitlementState {
   restore: () => Promise<{ error: string | null }>;
 }
 
+/**
+ * The browser test suite (apps/mobile/e2e) drives the web export, where there is no app store to
+ * subscribe through — so everything past the paywall would be untestable. A build made with
+ * EXPO_PUBLIC_E2E=1 treats the user as subscribed, on web only: the check on Platform.OS means an
+ * iOS or Android binary can never honour the flag, whatever its build environment says.
+ */
+const E2E_ENTITLED = Platform.OS === 'web' && process.env.EXPO_PUBLIC_E2E === '1';
+
 function isActive(info: CustomerInfo): boolean {
   return !!info.entitlements.active[ENTITLEMENT_ID];
 }
@@ -23,6 +32,10 @@ export const useEntitlementStore = create<EntitlementState>()((set, get) => ({
   offering: null,
 
   init: async () => {
+    if (E2E_ENTITLED) {
+      set({ hydrated: true, active: true, offering: null });
+      return;
+    }
     configureRevenueCat();
     if (!isRevenueCatConfigured()) {
       // No API key yet (dev environment) — treat as hydrated-but-inactive rather than blocking
@@ -51,6 +64,7 @@ export const useEntitlementStore = create<EntitlementState>()((set, get) => ({
   },
 
   logOut: async () => {
+    if (E2E_ENTITLED) return;
     if (!isRevenueCatConfigured()) return;
     try {
       await Purchases.logOut();

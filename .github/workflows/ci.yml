@@ -45,3 +45,31 @@ jobs:
         run: pnpm --filter mobile exec expo export --platform ios --output-dir /tmp/ci-export
         env:
           EXPO_NO_TELEMETRY: '1'
+
+  # The unit tests cover the arithmetic; nearly every real bug this app has had was somewhere
+  # else — the store, the sync queue, a screen. These drive the actual app in a browser against a
+  # fake Supabase (apps/mobile/e2e). A separate job so a slow browser run never delays the
+  # verify job's answer.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm --filter mobile exec playwright install --with-deps chromium
+      - name: Browser tests
+        run: pnpm --filter mobile e2e
+        env:
+          EXPO_NO_TELEMETRY: '1'
+      - name: Keep screenshots when a run fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: apps/mobile/e2e/.screenshots
+          include-hidden-files: true
