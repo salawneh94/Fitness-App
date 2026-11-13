@@ -23,12 +23,62 @@ export const daysAgo = (back) => {
 /** The label DayChips gives a day more than one back: "Fri 2". */
 export const chip = (back) => `${daysAgo(back).toLocaleDateString(undefined, { weekday: 'short' })} ${daysAgo(back).getDate()}`;
 
+/** The same helpers measured from a pinned date instead of the real one. */
+export function datesFrom(now) {
+  const at = (back) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - back);
+    return d;
+  };
+  return {
+    at,
+    iso: (back = 0) => `${at(back).getFullYear()}-${String(at(back).getMonth() + 1).padStart(2, '0')}-${String(at(back).getDate()).padStart(2, '0')}`,
+    chip: (back) => `${at(back).toLocaleDateString(undefined, { weekday: 'short' })} ${at(back).getDate()}`,
+  };
+}
+
+/**
+ * Work through the guided player: log the given sets for each exercise in turn, skipping the rest
+ * timers, then save. `sets` is one array per exercise — `[[weightKg, reps], …]` — and an empty
+ * array moves on without logging.
+ */
+export async function playWorkout(app, sets) {
+  const { page } = app;
+  for (let i = 0; i < sets.length; i++) {
+    for (const [kg, reps] of sets[i]) {
+      await page.getByPlaceholder('kg', { exact: true }).fill(String(kg));
+      await page.getByPlaceholder('reps', { exact: true }).fill(String(reps));
+      await page.getByLabel('Log set').click();
+      await page.getByLabel('Skip rest').click().catch(() => {});
+      await page.waitForTimeout(150);
+    }
+    await page.getByText(i === sets.length - 1 ? 'Finish Workout' : 'Next Exercise', { exact: true }).click();
+    await page.waitForTimeout(200);
+  }
+}
+
 // --- seed data --------------------------------------------------------------------------------
 
 export const profileRow = (extra = {}) => ({
   id: UID, name: 'Sam', age: 31, sex: 'male', height_cm: 180, weight_kg: 84, goal: 'lose_fat', target_weight_kg: 78,
   timeframe_weeks: 12, expectations: '', activity_level: 'moderate', preferred_days_per_week: 3, unit_system: 'metric',
   created_at: '2026-08-01T00:00:00Z', plan_template_id: null, plan_started_on: null, updated_at: '2026-10-03T00:00:00Z', ...extra,
+});
+
+/** A few real exercises from the library, in the shape the schedule stores them. */
+export const EX = {
+  squat: { id: 'squat', name: 'Barbell Back Squat', category: 'legs', equipment: 'Barbell', sets: 4, reps: '6-10' },
+  bench: { id: 'bench-press', name: 'Barbell Bench Press', category: 'chest', equipment: 'Barbell', sets: 4, reps: '6-10' },
+  row: { id: 'barbell-row', name: 'Barbell Row', category: 'back', equipment: 'Barbell', sets: 4, reps: '8-12' },
+  deadlift: { id: 'deadlift', name: 'Conventional Deadlift', category: 'back', equipment: 'Barbell', sets: 3, reps: '3-6' },
+  ohp: { id: 'ohp', name: 'Overhead Press', category: 'shoulders', equipment: 'Barbell', sets: 4, reps: '6-10' },
+};
+
+/** A logged strength session, as the workout_logs table stores it. `lifts` is `{ exercise: [[kg, reps], …] }`. */
+export const sessionRow = (id, date, name, lifts = {}, extra = {}) => ({
+  id, date, workout_name: name, duration_min: 50, calories_burned: null, notes: null, cardio: null,
+  exercise_logs: Object.entries(lifts).map(([key, sets]) => ({ exerciseId: EX[key].id, exerciseName: EX[key].name, sets: sets.map(([weightKg, reps]) => ({ weightKg, reps })) })),
+  ...extra,
 });
 
 /** Tables whose rows are unique per (user, day) rather than by id — mirrors the migrations. */
@@ -250,11 +300,13 @@ export const closeBrowser = () => browser?.close();
  * `user` is who is already signed in (their session is planted before the app boots); pass null to
  * start at the sign-in screen. Returns the page plus readers for what the app has persisted.
  */
-export async function openApp({ backend = createBackend(), user = backend.users[0], errors = [], context, wait = true } = {}) {
+export async function openApp({ backend = createBackend(), user = backend.users[0], errors = [], context, wait = true, now } = {}) {
   const ctx = context ?? (await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 }));
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
   await backend.attach(page);
+  // Pin "today" for anything that depends on the weekday. Timers keep running; only the date holds.
+  if (now) await page.clock.setFixedTime(now);
   if (user) {
     await page.addInitScript((session) => {
       if (!localStorage.getItem('e2e-session-planted')) {
