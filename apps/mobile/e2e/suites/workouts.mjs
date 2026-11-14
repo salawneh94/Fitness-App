@@ -12,6 +12,11 @@ async function start(app, name = 'Strength') {
   await app.page.getByText('Start Workout', { exact: true }).click();
   await app.settle();
 }
+/** Dismiss the day sheet if it's still up — without waiting half a minute to find out it isn't. */
+async function closeSheet(page) {
+  const close = page.getByLabel('Close');
+  if (await close.count()) await close.first().click({ timeout: 2000 }).catch(() => {});
+}
 const fields = async (page) => [await page.getByPlaceholder('kg', { exact: true }).inputValue(), await page.getByPlaceholder('reps', { exact: true }).inputValue()].join(' × ');
 async function logSet(page) {
   await page.getByLabel('Log set').click();
@@ -68,7 +73,7 @@ export default async function ({ check, errors, shot }) {
     check('the session is saved with every set', log?.exerciseLogs?.length === 3 && log.exerciseLogs[0].sets[0].weightKg === 82.5 && log.exerciseLogs[1].sets[0].reps === 9,
       JSON.stringify(log?.exerciseLogs?.map((e) => [e.exerciseName, e.sets])));
     check('…and reaches the server', backend.find('workout_logs', (r) => r.date === iso(0))?.exercise_logs?.length === 3);
-    await page.getByLabel('Close').click().catch(() => {});
+    await closeSheet(page);
     await app.settle(200);
     check('history marks the session with its personal bests',
       (await page.getByLabel('2 personal bests: Barbell Back Squat, Heaviest ever: 82.5 kg × 6; Barbell Bench Press, Best set: 60 kg × 9').count()) === 1);
@@ -144,7 +149,7 @@ export default async function ({ check, errors, shot }) {
 
     await page.getByLabel('Exit workout').click();
     await app.settle(200);
-    await app.page.getByLabel('Close').click().catch(() => {});
+    await closeSheet(page);
     await app.tab('Plans');
     check('walking away without lifting keeps it planned, where it can be seen', (await page.getByText('Planned deloads').count()) === 1 && (await page.getByText('60 kg → 55 kg next session').count()) === 1);
 
@@ -155,7 +160,7 @@ export default async function ({ check, errors, shot }) {
     await app.settle(300);
     await page.getByText('Save', { exact: true }).last().click();
     await app.settle();
-    await page.getByLabel('Close').click().catch(() => {});
+    await closeSheet(page);
     await app.tab('Plans');
     check('once the lighter session is done, the plan is spent', (await page.getByText('Planned deloads').count()) === 0);
     await start(app);
